@@ -158,15 +158,15 @@ class ReplayBuffer(object):
             np.asarray(self.logprobs)[indices]
         )
 
-    def get_all(self):
-        return (
-            np.asarray(self.obs),
-            np.asarray(self.acts),
-            np.asarray(self.rewards),
-            np.asarray(self.nxt_obs),
-            np.asarray(self.dones),
-            np.asarray(self.logprobs)
-        )
+    def get_all(self, batch_size):
+        batched_dsets = []
+        # batch up data
+        for dset in [np.asarray(self.obs), np.asarray(self.acts), np.asarray(self.rewards), np.asarray(self.nxt_obs), np.asarray(self.dones), np.asarray(self.logprobs)]:
+            bdset = []
+            for i in xrange(0, len(dset), batch_size):
+                 bdset.append(dset[i:i+batch_size])
+            batched_dset.append(np.asarray(bdset))
+        return tuple(batched_dsets)
     
     def update_size(self):
         diff = self.max_size - len(self)
@@ -213,8 +213,8 @@ class MasterBuffer(object):
         indices = np.random.randint(0, len(self.master_replay), batch_size)
         return self.master_replay.get_samples(indices)
 
-    def get_all_recent(self):
-        return self.temp_replay.get_all()
+    def get_all_recent(self, batch_size):
+        return self.temp_replay.get_all(batch_size)
     
     ## Density Sampling Start ##
     # credit to hw5
@@ -432,7 +432,7 @@ class Agent(object):
         self.policy.set_session(sess)
         self.density.set_session(sess)
         
-    def sample_env(self, num_samples):
+    def sample_env(self, batch_size, num_samples):
         replay_buffer.flush_temp()
         obs = self.env.reset()
         i = 0
@@ -443,7 +443,7 @@ class Agent(object):
             replay_buffer.record(obs, act, rew, nxt_ob, done)
             obs = nxt_ob if not done else env.reset()
             i+=1
-            if i == num_samples - 1: break
+            if i == self.num_samples - 1: break
         
         # get logprobs of taking actions w.r.t current policy
         obs, actions = replay_buffer.get_actions()
@@ -452,30 +452,32 @@ class Agent(object):
             policy.act: actions
         })
         replay_buffer.set_logprobs(logprobs)
-        return replay_buffer.get_all_recent()
+        return replay_buffer.get_all_recent(batch_size)
         
     def choose_action(self, obs):
         # Greedy action for now
         #return self.policy.get_best_action(obs)
         return self.env.action_space.sample()
 
-    def train(self, batch_size):
-        obs, acts, rewards, nxt_obs, dones, logprobs = self.sample_env()
+    def train(self, batch_size, num_samples):
+        obsList, actsList, rewardsList, nxt_obsList, donesList, logprobsList = self.sample_env(batch_size,  num_samples)
 
-        # train density model
-        for _ in range(self.density_train_itr):
-            s1, s2, target = self.replay_buffer.get_density_batch(obs, batch_size)
-            ll, kl, elbo = self.density.update(s1, s2, target)
-        # inject exploration bonus
-        rewards = self.density.modify_reward(obs, rewards)
+        # process in batches of data
+        for obs, acts, rewards, nxt_obs, dones, logprobs in zip(obsList, actsList, rewardsList, nxt_obsList, donesList, logprobsList):
+            # train density model
+            for _ in range(self.density_train_itr):
+                s1, s2, target = self.replay_buffer.get_density_batch(obs, batch_size)
+                ll, kl, elbo = self.density.update(s1, s2, target)
+            # inject exploration bonus
+            rewards = self.density.modify_reward(obs, rewards)
 
-        # train critic
-        self.policy.train_critic(obs, nxt_obs, rewards, dones)
-        # train actor
-        adv = policy.estimate_adv(obs, rewards, nxt_obs, dones)
-        self.policy.train_actor(obs, acts, logprobs, adv)
+            # train critic
+            self.policy.train_critic(obs, nxt_obs, rewards, dones)
+            # train actor
+            adv = policy.estimate_adv(obs, rewards, nxt_obs, dones)
+            self.policy.train_actor(obs, acts, logprobs, adv)
     
-    def test(self, num_tests, render=False, max_steps=5000):
+    def test(self, num_tests, render=False, max_steps=1000):
         obs = self.env.reset()
         frames = [self.env.render(mode='rgb_array')]
         i, step = 0, 0
@@ -563,8 +565,7 @@ with tf.Session(config=tf_config) as sess:
         for itr in range(n_iter):
             start = time.time()
 
-            agent.sample_env(ns)
-            agent.train(batch_size=bs)
+            agent.train(batch_size=bs, num_samples=num_samples)
             
             end = time.time()
             print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)), end="", flush=True)

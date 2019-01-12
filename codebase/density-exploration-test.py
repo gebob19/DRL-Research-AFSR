@@ -157,6 +157,16 @@ class ReplayBuffer(object):
             np.asarray(self.dones)[indices],
             np.asarray(self.logprobs)[indices]
         )
+
+    def get_all(self):
+        return (
+            np.asarray(self.obs),
+            np.asarray(self.acts),
+            np.asarray(self.rewards),
+            np.asarray(self.nxt_obs),
+            np.asarray(self.dones),
+            np.asarray(self.logprobs)
+        )
     
     def update_size(self):
         diff = self.max_size - len(self)
@@ -202,6 +212,9 @@ class MasterBuffer(object):
     def get_batch(self, batch_size):
         indices = np.random.randint(0, len(self.master_replay), batch_size)
         return self.master_replay.get_samples(indices)
+
+    def get_all_recent(self):
+        return self.temp_replay.get_all()
     
     ## Density Sampling Start ##
     # credit to hw5
@@ -420,6 +433,7 @@ class Agent(object):
         self.density.set_session(sess)
         
     def sample_env(self, num_samples):
+        replay_buffer.flush_temp()
         obs = self.env.reset()
         i = 0
         while True:
@@ -438,7 +452,7 @@ class Agent(object):
             policy.act: actions
         })
         replay_buffer.set_logprobs(logprobs)
-        replay_buffer.flush_temp()
+        return replay_buffer.get_all_recent()
         
     def choose_action(self, obs):
         # Greedy action for now
@@ -446,21 +460,20 @@ class Agent(object):
         return self.env.action_space.sample()
 
     def train(self, batch_size):
-        obs, acts, rewards, nxt_obs, dones, logprobs = self.replay_buffer.get_batch(batch_size)
-        # inject exploration bonus
-        rewards = self.density.modify_reward(obs, rewards)
+        obs, acts, rewards, nxt_obs, dones, logprobs = self.sample_env()
 
-        # train actor
-        adv = policy.estimate_adv(obs, rewards, nxt_obs, dones)
-        self.policy.train_actor(obs, acts, logprobs, adv)
-        
-        # train critic
-        self.policy.train_critic(obs, nxt_obs, rewards, dones)
-        
         # train density model
         for _ in range(self.density_train_itr):
             s1, s2, target = self.replay_buffer.get_density_batch(obs, batch_size)
             ll, kl, elbo = self.density.update(s1, s2, target)
+        # inject exploration bonus
+        rewards = self.density.modify_reward(obs, rewards)
+
+        # train critic
+        self.policy.train_critic(obs, nxt_obs, rewards, dones)
+        # train actor
+        adv = policy.estimate_adv(obs, rewards, nxt_obs, dones)
+        self.policy.train_actor(obs, acts, logprobs, adv)
     
     def test(self, num_tests, render=False, max_steps=5000):
         obs = self.env.reset()
@@ -497,7 +510,7 @@ d_graph_args = {
     'kl_weight': 1e-2,
     'conv_depth': 5,
     'hid_size': 32,
-    'n_hidden': 4,
+    'n_hidden': 2,
     'bonus_multiplier': 1
 }
 p_graph_args = {

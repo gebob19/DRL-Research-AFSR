@@ -51,8 +51,8 @@ class Policy(object):
         # importance sampling
         ratio = tf.exp(self.logprob - self.old_logprob)
         clipped_ratio = tf.clip_by_value(ratio, 1.0-clip_range, 1.0+clip_range)        
-        ## include increase entropy term with alpha=0.2
-        batch_loss = tf.minimum(ratio*self.adv, clipped_ratio*self.adv) #- 0.2 * self.logprob
+        # include increase entropy term with alpha=0.2
+        batch_loss = tf.minimum(ratio*self.adv, clipped_ratio*self.adv) - 0.2 * self.logprob
         self.actor_loss = -1 * tf.reduce_mean(batch_loss)
         self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.actor_loss)
         
@@ -85,6 +85,7 @@ class Policy(object):
         return act
     
     def estimate_adv(self, obs, rew, nxt_obs, dones):
+        ## Markov Implementation??
         # V(s) & V(s')
         v_obs = self.sess.run(self.v_pred, feed_dict={self.obs: obs})
         v_nxt_obs = self.sess.run(self.v_pred, feed_dict={self.obs: nxt_obs})
@@ -137,7 +138,7 @@ class ReplayBuffer(object):
         self.logprobs += list(logprobs)
         assert len(self.logprobs) == len(self.obs), 'logprobs MUST == self.obs'
         
-    def merge(self, logprobs, obs, acts, rews, nxt_obs, dones):
+    def merge(self, obs, acts, rews, nxt_obs, dones, logprobs):
         self.obs += obs
         self.acts += acts
         self.rewards += rews
@@ -146,7 +147,7 @@ class ReplayBuffer(object):
         self.logprobs += list(logprobs)
     
     def export(self):
-        return self.obs, self.acts, self.rewards, self.nxt_obs, self.dones
+        return self.obs, self.acts, self.rewards, self.nxt_obs, self.dones, self.logprobs
     
     def get_samples(self, indices):
         return (
@@ -163,9 +164,9 @@ class ReplayBuffer(object):
         # batch up data
         for dset in [np.asarray(self.obs), np.asarray(self.acts), np.asarray(self.rewards), np.asarray(self.nxt_obs), np.asarray(self.dones), np.asarray(self.logprobs)]:
             bdset = []
-            for i in xrange(0, len(dset), batch_size):
-                 bdset.append(dset[i:i+batch_size])
-            batched_dset.append(np.asarray(bdset))
+            for i in range(0, len(dset), batch_size):
+                 bdset.append(np.array(dset[i:i+batch_size]))
+            batched_dsets.append(np.asarray(bdset))
         return tuple(batched_dsets)
     
     def update_size(self):
@@ -205,8 +206,11 @@ class MasterBuffer(object):
         return np.asarray(self.master_replay.obs)
     
     def set_logprobs(self, logprobs):
-        temp_data = self.temp_replay.export()
-        self.master_replay.merge(logprobs, *temp_data)
+        self.temp_replay.logprobs = logprobs
+
+    def merge_temp(self):
+        tempdata = self.temp_replay.export()
+        self.master_replay.merge(*tempdata)
         self.master_replay.update_size()
     
     def get_batch(self, batch_size):
@@ -240,7 +244,7 @@ class MasterBuffer(object):
         return positives, negatives
 
     def sample_idxs_replay(self, states, batch_size):
-        states = copy.deepcopy(states)
+        states = np.asarray(copy.deepcopy(states))
         data_size = len(states)
         pos_idxs = np.random.randint(data_size, size=batch_size)
         neg_idxs = np.random.randint(data_size, len(self.master_replay), size=batch_size)
@@ -433,26 +437,26 @@ class Agent(object):
         self.density.set_session(sess)
         
     def sample_env(self, batch_size, num_samples):
-        replay_buffer.flush_temp()
         obs = self.env.reset()
         i = 0
         while True:
             act = self.choose_action(obs)
             nxt_ob, rew, done, _ = env.step(act)
             
-            replay_buffer.record(obs, act, rew, nxt_ob, done)
+            self.replay_buffer.record(obs, act, rew, nxt_ob, done)
             obs = nxt_ob if not done else env.reset()
             i+=1
-            if i == self.num_samples - 1: break
+            if i == num_samples - 1: break
         
         # get logprobs of taking actions w.r.t current policy
-        obs, actions = replay_buffer.get_actions()
+        obs, actions = self.replay_buffer.get_actions()
         logprobs = sess.run(policy.logprob, feed_dict={
             policy.obs: obs,
             policy.act: actions
         })
-        replay_buffer.set_logprobs(logprobs)
-        return replay_buffer.get_all_recent(batch_size)
+        self.replay_buffer.set_logprobs(logprobs)
+        self.replay_buffer.merge_temp()
+        return self.replay_buffer.get_all_recent(batch_size)
         
     def choose_action(self, obs):
         # Greedy action for now
@@ -461,15 +465,20 @@ class Agent(object):
 
     def train(self, batch_size, num_samples):
         obsList, actsList, rewardsList, nxt_obsList, donesList, logprobsList = self.sample_env(batch_size,  num_samples)
+        self.replay_buffer.flush_temp()
 
         # process in batches of data
         for obs, acts, rewards, nxt_obs, dones, logprobs in zip(obsList, actsList, rewardsList, nxt_obsList, donesList, logprobsList):
             # train density model
             for _ in range(self.density_train_itr):
+                # start = time.time()
                 s1, s2, target = self.replay_buffer.get_density_batch(obs, batch_size)
                 ll, kl, elbo = self.density.update(s1, s2, target)
+                # end = time.time()
+                # print('completed itr {} in {}sec...\r'.format(str(itr), (end-start)))
             # inject exploration bonus
             rewards = self.density.modify_reward(obs, rewards)
+            print('MeanReward', np.mean(rewards))
 
             # train critic
             self.policy.train_critic(obs, nxt_obs, rewards, dones)
@@ -484,10 +493,10 @@ class Agent(object):
         try:
             while i < num_tests:
                 if render:
-                    frames.append(env.render(mode='rgb_array'))
+                    frames.append(self.env.render(mode='rgb_array'))
                 act = self.policy.get_best_action(obs)
                 nxt_ob, rew, done, _ = env.step(act)
-                replay_buffer.record(obs, act, rew, nxt_ob, done)
+                # replay_buffer.record(obs, act, rew, nxt_ob, done)
                 obs = nxt_ob
                 if done or step > max_steps:
                     obs = env.reset()
@@ -497,8 +506,9 @@ class Agent(object):
         finally:
             self.env.close()
             
-        totalr, stdr = replay_buffer.get_temp_reward_info()
-        logger.log(totalr / i, stdr)
+        # totalr, stdr = replay_buffer.get_temp_reward_info()
+        # replay_buffer.flush_temp()
+        # logger.log(totalr / i, stdr)
         logger.log_frames(frames)
         frames = []
 
@@ -533,11 +543,14 @@ agent_args = {
 }
 
 # build graph
+# Every N samples -> rollout with agent test data?
+# when rewards are very small => just make them negative
+
 # models
 policy = Policy(p_graph_args, adv_args)
 density_model = DensityModel(d_graph_args)
-# utils
-replay_buffer = MasterBuffer(max_size=500000)
+# utils # SmallRAMProblems
+replay_buffer = MasterBuffer(max_size=40000)
 logger = Logger()
 
 # agent which will do all the work
@@ -546,16 +559,16 @@ agent = Agent(env, policy, density_model, replay_buffer, logger, agent_args)
 import time
 
 tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
-# tf_config.gpu_options.allow_growth = True
+tf_config.gpu_options.allow_growth = True
 with tf.Session(config=tf_config) as sess:
     sess.run(tf.global_variables_initializer())
     agent.set_session(sess)
     
-    n_iter = 10
-    num_samples = [500, 200, 1000]
+    n_iter = 100
+    num_samples = [100]
     # batch_sizes = [128]
-    bs = 128
-    render_n = 10
+    bs = 64
+    render_n = 5
     
     print('starting to train...')
     for ns in num_samples:
@@ -564,10 +577,9 @@ with tf.Session(config=tf_config) as sess:
         
         for itr in range(n_iter):
             start = time.time()
-
-            agent.train(batch_size=bs, num_samples=num_samples)
-            
+            agent.train(batch_size=bs, num_samples=ns)
             end = time.time()
+
             print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)), end="", flush=True)
             if itr % (render_n - 1) == 0 and itr != 0:
                 agent.test(1, render=True)

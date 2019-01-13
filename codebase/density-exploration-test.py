@@ -52,7 +52,7 @@ class Policy(object):
         ratio = tf.exp(self.logprob - self.old_logprob)
         clipped_ratio = tf.clip_by_value(ratio, 1.0-clip_range, 1.0+clip_range)        
         # include increase entropy term with alpha=0.2
-        batch_loss = tf.minimum(ratio*self.adv, clipped_ratio*self.adv) - 0.2 * self.logprob
+        batch_loss = tf.minimum(ratio*self.adv, clipped_ratio * self.adv) - 0.2 * self.logprob
         self.actor_loss = -1 * tf.reduce_mean(batch_loss)
         self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.actor_loss)
         
@@ -420,6 +420,8 @@ class DensityModel(object):
     def modify_reward(self, state, rewards):
         probs = self.get_prob(state)
         bonus = -np.log(probs)
+        # Normalize Bonus
+        bonus = (bonus - np.mean(bonus)) / (np.var(bonus) + 1e-6)
         return rewards + self.bonus_multiplier * bonus
 
 class Agent(object):
@@ -478,7 +480,6 @@ class Agent(object):
                 # print('completed itr {} in {}sec...\r'.format(str(itr), (end-start)))
             # inject exploration bonus
             rewards = self.density.modify_reward(obs, rewards)
-            print('MeanReward', np.mean(rewards))
 
             # train critic
             self.policy.train_critic(obs, nxt_obs, rewards, dones)
@@ -488,14 +489,17 @@ class Agent(object):
     
     def test(self, num_tests, render=False, max_steps=1000):
         obs = self.env.reset()
-        frames = [self.env.render(mode='rgb_array')]
+        frames = [obs]
+        rewards = []
         i, step = 0, 0
         try:
             while i < num_tests:
-                if render:
-                    frames.append(self.env.render(mode='rgb_array'))
+                # if render:
+                #     frames.append(self.env.render(mode='rgb_array'))
                 act = self.policy.get_best_action(obs)
                 nxt_ob, rew, done, _ = env.step(act)
+                rewards.append(rew)
+                frames.append(nxt_ob)
                 # replay_buffer.record(obs, act, rew, nxt_ob, done)
                 obs = nxt_ob
                 if done or step > max_steps:
@@ -506,10 +510,11 @@ class Agent(object):
         finally:
             self.env.close()
             
+        rewards = self.density.modify_reward(frames, rew)
         # totalr, stdr = replay_buffer.get_temp_reward_info()
         # replay_buffer.flush_temp()
         # logger.log(totalr / i, stdr)
-        logger.log_frames(frames)
+        logger.log_frames([frames, reward])
         frames = []
 
 # test density fcn 

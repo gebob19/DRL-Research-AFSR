@@ -127,7 +127,7 @@ class DensityModel(object):
             likelihood = self.sess.run(self.enc_likelihood, feed_dict={
                 self.enc1: state1,
                 self.enc2: state2,
-                self.discrim_target: target
+                self.discrim_target: target 
             })
         return likelihood
 

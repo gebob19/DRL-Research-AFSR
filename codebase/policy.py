@@ -29,7 +29,7 @@ class Policy(object):
         clipped_ratio = tf.clip_by_value(ratio, 1.0-clip_range, 1.0+clip_range)        
         # include increase entropy term with alpha=0.2
         batch_loss = tf.minimum(ratio*self.adv, clipped_ratio * self.adv) - 0.2 * self.logprob
-        self.actor_loss = -1 * tf.reduce_mean(batch_loss)
+        self.actor_loss = -tf.reduce_mean(batch_loss)
         self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.actor_loss)
         
         # critic definition
@@ -74,18 +74,19 @@ class Policy(object):
         return adv
     
     def train_actor(self, obs, act, logprob, adv):
-        self.sess.run(self.actor_update_op, feed_dict={
+        loss, _ = self.sess.run([self.actor_loss, self.actor_update_op], feed_dict={
             self.obs: obs,
             self.act: act,
             self.adv: adv,
             self.old_logprob: logprob
         })
+        return loss
         
     def train_critic(self, obs, nxt_obs, rew, dones):
         for i in range(self.num_grad_steps_per_target_update * self.num_target_updates):
             if i % self.num_grad_steps_per_target_update == 0:
                 v_pred = self.sess.run(self.v_pred, feed_dict={self.obs: nxt_obs})
                 y = rew + self.gamma * v_pred * (1 - dones)
-                
             _, loss = self.sess.run([self.critic_update_op, self.critic_loss],
                                     feed_dict={self.obs: obs, self.v_target: y})
+        return loss

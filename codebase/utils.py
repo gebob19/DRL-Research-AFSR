@@ -1,11 +1,12 @@
 import tensorflow as tf
 import numpy as np 
 import copy
+import time
 import pickle
 from pathlib import Path
 
-def Network(input_tensor, output_size, scope, fsize, conv_depth, n_hidden_dense=0, activation=tf.tanh, output_activation=None):
-        with tf.variable_scope(scope):
+def Network(input_tensor, output_size, scope, fsize, conv_depth, n_hidden_dense=0, activation=tf.tanh, output_activation=None, reuse=False):
+        with tf.variable_scope(scope, reuse=reuse):
             x = input_tensor
             # Convolutions
             for _ in range(conv_depth):
@@ -64,10 +65,16 @@ class ReplayBuffer(object):
             np.asarray(self.logprobs)[indices]
         )
 
-    def get_all(self, batch_size):
+    def get_all(self, batch_size, shuffle=False, size=None):
+        if size is None: size = len(self.obs)
+        o, a, r, n, d, l = np.asarray(self.obs), np.asarray(self.acts), np.asarray(self.rewards), np.asarray(self.nxt_obs), np.asarray(self.dones), np.asarray(self.logprobs)
+        if shuffle:
+            indxs = np.random.randint(0, len(o), size)
+            o, a, r, n, d, l = o[indxs], a[indxs], r[indxs], n[indxs], d[indxs], l[indxs]
+
         batched_dsets = []
         # batch up data
-        for dset in [np.asarray(self.obs), np.asarray(self.acts), np.asarray(self.rewards), np.asarray(self.nxt_obs), np.asarray(self.dones), np.asarray(self.logprobs)]:
+        for dset in [o, a, r, n, d, l]:
             bdset = []
             for i in range(0, len(dset), batch_size):
                  bdset.append(np.array(dset[i:i+batch_size]))
@@ -122,8 +129,12 @@ class MasterBuffer(object):
         indices = np.random.randint(0, len(self.master_replay), batch_size)
         return self.master_replay.get_samples(indices)
 
-    def get_all_recent(self, batch_size):
-        return self.temp_replay.get_all(batch_size)
+    def get_all(self, batch_size, master=False, shuffle=False, size=None):
+        if not master:
+            return self.temp_replay.get_all(batch_size, shuffle)
+        else:
+            return self.master_replay.get_all(batch_size, shuffle, size)
+
     
     ## Density Sampling Start ##
     # credit to hw5
@@ -173,36 +184,45 @@ class MasterBuffer(object):
 
 class Logger(object):
     def __init__(self):
-        self.tag = None
-        self.totalr = []
-        self.std_reward = []
-        
-        self.tags = []
-        self.results = []
-        
+        self.logs = {
+            'density': {
+                'logloss': [],
+                'kl': [],
+                'elbo': []
+            },
+            'dynamics': {
+                'loss': [],
+                'max_profit': []
+            },
+            'policy': {
+                'actor_loss':[],
+                'critic_loss':[],
+            },
+        }
         self.fset = Path('iter-frames')
-        self.fset.mkdir(exist_ok=True)
-        self.n_frames_stored = 0
+        # self.fset.mkdir(exists_ok=True)
         
-    def set_tag(self, tag):
-        self.tag = tag
-        
-    def log(self, totalr, std):
-        self.totalr.append(totalr)
-        self.std_reward.append(std)
-        
-    def log_frames(self, frames):
-        fname = '{}-{}'.format(self.tag, self.n_frames_stored)
+    def log(self, tag, subtags, data):
+        for subtag, d in zip(subtags, data):
+            self.logs[tag][subtag].append(d)
+
+    def export(self):
+        fname = 'dataset-{}'.format(time.time())
         with open(self.fset/fname, 'wb') as f:
-            pickle.dump(frames, f, protocol=pickle.HIGHEST_PROTOCOL)
-            
-        self.n_frames_stored += 1
-        
-    def package_results(self):
-        # store
-        self.tags.append(self.tag)
-        self.results.append([self.totalr, self.std_reward])
+            pickle.dump(self.logs, f, protocol=pickle.HIGHEST_PROTOCOL)
     
     def flush(self):
-        self.totalr = []
-        self.std_reward = []
+        self.logs = {
+            'density': {
+                'logloss': [],
+                'kl': [],
+                'elbo': []
+            },
+            'dynamics': {
+                'loss': []
+            },
+            'policy': {
+                'actor_loss':[],
+                'critic_loss':[],
+            }
+        }

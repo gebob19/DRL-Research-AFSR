@@ -199,17 +199,20 @@ class Logger(object):
                 'critic_loss':[],
             },
         }
-        self.fset = Path('iter-frames')
-        # self.fset.mkdir(exists_ok=True)
+        self.fset = Path('logs')
         
     def log(self, tag, subtags, data):
         for subtag, d in zip(subtags, data):
             self.logs[tag][subtag].append(d)
 
     def export(self):
-        fname = 'dataset-{}'.format(time.time())
+        fname = '{}.pkl'.format(time.time())
         with open(self.fset/fname, 'wb') as f:
             pickle.dump(self.logs, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def import_logs(self, fname):
+        with open(self.fset/fname, 'rb') as f:
+            self.logs = pickle.load(f)
     
     def flush(self):
         self.logs = {

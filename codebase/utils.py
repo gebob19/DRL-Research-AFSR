@@ -71,7 +71,6 @@ class ReplayBuffer(object):
         if shuffle:
             indxs = np.random.randint(0, len(o), size)
             o, a, r, n, d, l = o[indxs], a[indxs], r[indxs], n[indxs], d[indxs], l[indxs]
-
         batched_dsets = []
         # batch up data
         for dset in [o, a, r, n, d, l]:
@@ -199,7 +198,7 @@ class Logger(object):
                 'critic_loss':[],
             },
         }
-        self.fset = Path('logs')
+        self.fset = Path('.')
         
     def log(self, tag, subtags, data):
         for subtag, d in zip(subtags, data):
@@ -207,7 +206,7 @@ class Logger(object):
 
     def export(self):
         fname = '{}.pkl'.format(time.time())
-        with open(self.fset/fname, 'wb') as f:
+        with open(fname, 'wb') as f:
             pickle.dump(self.logs, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def import_logs(self, fname):

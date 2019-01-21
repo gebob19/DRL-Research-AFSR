@@ -67,24 +67,27 @@ class Agent(object):
         self.replay_buffer.merge_temp()
         return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
         
-    def get_action(self, obs, num_actions):
+    def get_action(self, obs, num_actions, debug=False):
         # Encode observation from density encoder
         enc_obs = self.density.get_encoding([obs])[0]
         # get action from state dynamics
         actions, profit = self.dynamics.get_best_actions(enc_obs, self.profit_fcn, num_actions)
 
         # To exploit or not to exploit, is the question...
-        if profit < self.exploitation_threshold:  
+        if profit < self.exploitation_threshold:
             actions = [[policy.get_best_action(obs)]]
         else:
             actions = actions.eval()
 
         logger.log('dynamics', ['max_profit'], [profit])
+        if debug:
+            policy_stats = self.policy.get_act_distrib(obs)
+            return actions, profit, self.exploitation_threshold, policy_stats
         return actions
         
     def get_data(self, batch_size, num_samples, itr):
-        # if itr < self.num_random_samples:
-        #     return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
+        if itr < self.num_random_samples:
+            return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
         
         if itr % self.algorithm_rollout_rate == 0:
             return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='algorithm')
@@ -161,15 +164,17 @@ if __name__ == '__main__':
         'horizon': 30,
         'num_rollouts': 200,
     }
+
+    # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
-        'density_train_itr': 100
+        'density_train_itr': 1000
         'dynamics_train_itr': 10,
         'num_actions_taken_conseq': 5,
         # hyperparameterized
         'exploitation_threshold': 0,
         'num_random_samples': 5,
         # very expensive to rollout so we set a rate
-        'algorithm_rollout_rate': 5
+        'algorithm_rollout_rate': 0
     }
 
     replay_buffer = MasterBuffer(max_size=30000)
@@ -187,27 +192,43 @@ if __name__ == '__main__':
     num_samples = 100
     batch_size = 32
     n_export = 10
+    train = True
     
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
     tf_config.gpu_options.allow_growth = True
     saver = tf.train.Saver()
     with tf.Session(config=tf_config) as sess:
         sess.run(tf.global_variables_initializer())
-        # saver.restore(sess, "./model_data/model-1547614855.98.ckpt")
+        
+        if train:
+            # saver.restore(sess, "./model_data/model-1547614855.98.ckpt")
+            for exp in exploitations_to_test:
+                agent.exploitation_threshold = exp
+                agent.set_session(sess)
 
-        for exp in exploitations_to_test:
-            agent.exploitation_threshold = exp
-            agent.set_session(sess)
+                print('testing with exploitation: {}'.format(exp))
+                # start training
+                for itr in range(n_iter):
+                    start = time.time()
+                    agent.train(batch_size, num_samples, itr)
+                    end = time.time()
+                    print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
+                    
+                    if itr % n_export == 0 and itr != 0:
+                        logger.export()
+                        print('Exported logs...')
+            saver.save(sess, './model_data/model-{}.ckpt'.format(time.time()))
+        else: # view
+            saver.restore(sess, "./model_data/model-1547614855.98.ckpt")
+            obs = env.reset()
+            while True:
+                actions, profit, policy_stats = agent.get_action(obs, 1, debug=True)
+                act = actions[0][0]
+                print('Action:{}, Pred_Profit:{}, Act_Distrib:{}'.format(
+                    act, profit, policy_stats
+                ))
+                n_ob, rew, done, _ = env.step(act)
+                input('Press a key to continue...')
+                if done: break
 
-            print('testing with exploitation: {}'.format(exp))
-            # start training
-            for itr in range(n_iter):
-                start = time.time()
-                agent.train(batch_size, num_samples, itr)
-                end = time.time()
-                print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
                 
-                if itr % n_export == 0 and itr != 0:
-                    logger.export()
-                    print('Exported logs...')
-        saver.save(sess, './model_data/model-{}.ckpt'.format(time.time()))

@@ -28,7 +28,7 @@ class Policy(object):
         ratio = tf.exp(self.logprob - self.old_logprob)
         clipped_ratio = tf.clip_by_value(ratio, 1.0-clip_range, 1.0+clip_range)        
         # include increase entropy term with alpha=0.2
-        batch_loss = tf.minimum(ratio*self.adv, clipped_ratio * self.adv) - 0.2 * self.logprob
+        batch_loss = tf.minimum(ratio*self.adv, clipped_ratio * self.adv) #- 0.2 * self.logprob
         self.actor_loss = -tf.reduce_mean(batch_loss)
         self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.actor_loss)
         

@@ -83,7 +83,7 @@ class Agent(object):
         logger.log('dynamics', ['max_profit'], [profit])
         if debug:
             policy_stats = self.policy.get_act_distrib(obs)
-            return actions, profit, self.exploitation_threshold, policy_stats
+            return actions, profit, policy_stats
         return actions
         
     def get_data(self, batch_size, num_samples, itr):
@@ -193,19 +193,18 @@ if __name__ == '__main__':
     num_samples = 100
     batch_size = 32
     n_export = 10
-    train = True
+    train = False
     
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
     tf_config.gpu_options.allow_growth = True
     saver = tf.train.Saver()
     with tf.Session(config=tf_config) as sess:
         sess.run(tf.global_variables_initializer())
-        
+        agent.set_session(sess)
         if train:
             # saver.restore(sess, "./model_data/model-1547614855.98.ckpt")
             for exp in exploitations_to_test:
                 agent.exploitation_threshold = exp
-                agent.set_session(sess)
 
                 print('testing with exploitation: {}'.format(exp))
                 # start training
@@ -220,12 +219,13 @@ if __name__ == '__main__':
                         print('Exported logs...')
             saver.save(sess, './model_data/model-{}.ckpt'.format(time.time()))
         else: # view
-            saver.restore(sess, "./model_data/model-1547614855.98.ckpt")
+            # saver.restore(sess, "./model_data/model-first.ckpt")
             obs = env.reset()
             while True:
+                env.render()
                 actions, profit, policy_stats = agent.get_action(obs, 1, debug=True)
                 act = actions[0][0]
-                print('Action:{}, Pred_Profit:{}, Act_Distrib:{}'.format(
+                print('Action:{}, Pred_Sum_Profit:{}, Act_Distrib:{}'.format(
                     act, profit, policy_stats
                 ))
                 n_ob, rew, done, _ = env.step(act)

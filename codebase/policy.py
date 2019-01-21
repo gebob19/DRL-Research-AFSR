@@ -59,6 +59,11 @@ class Policy(object):
             self.obs: [observation]
         })[0]
         return act
+
+    def get_act_distrib(self, obs):
+        return self.sess.run(self.policy_distrib, feed_dict={
+            self.obs: [obs]
+        })[0]
     
     def estimate_adv(self, obs, rew, nxt_obs, dones):
         ## Markov Implementation??

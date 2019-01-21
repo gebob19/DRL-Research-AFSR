@@ -109,6 +109,9 @@ class MasterBuffer(object):
     
     def record(self, *args):
         self.temp_replay.record(*args)
+
+    def get_temp_rewards(self):
+        return np.asarray(self.temp_replay.rewards)
         
     def get_actions(self):
         return self.temp_replay.get_actions()
@@ -197,6 +200,9 @@ class Logger(object):
                 'actor_loss':[],
                 'critic_loss':[],
             },
+            'env': {
+                'rewards': []
+            }
         }
         self.fset = Path('.')
         

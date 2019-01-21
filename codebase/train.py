@@ -57,6 +57,7 @@ class Agent(object):
             self.replay_buffer.record(obs, act, rew, n_ob, done)
             obs = n_ob if not done else env.reset()
         
+        logger.log('env', ['rewards'], [np.sum(self.replay_buffer.get_temp_rewards())])
         # get logprobs of taking actions w.r.t current policy
         obs, actions = self.replay_buffer.get_actions()
         logprobs = sess.run(policy.logprob, feed_dict={
@@ -167,12 +168,12 @@ if __name__ == '__main__':
 
     # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
-        'density_train_itr': 1000
+        'density_train_itr': 100,
         'dynamics_train_itr': 10,
-        'num_actions_taken_conseq': 5,
+        'num_actions_taken_conseq': 10,
         # hyperparameterized
         'exploitation_threshold': 0,
-        'num_random_samples': 5,
+        'num_random_samples': 100,
         # very expensive to rollout so we set a rate
         'algorithm_rollout_rate': 0
     }
@@ -187,7 +188,7 @@ if __name__ == '__main__':
     agent = Agent(env, policy, density, dynamics, replay_buffer, logger, agent_args)
 
     # training parameters
-    exploitations_to_test = [np.random.randint(50, 100), np.random.randint(50, 100)]
+    exploitations_to_test = [np.random.randint(50, 100)]
     n_iter = 51
     num_samples = 100
     batch_size = 32

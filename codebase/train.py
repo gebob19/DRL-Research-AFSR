@@ -75,10 +75,10 @@ class Agent(object):
         actions, profit = self.dynamics.get_best_actions(enc_obs, self.profit_fcn, num_actions)
 
         # To exploit or not to exploit, is the question...
-        if profit < self.exploitation_threshold:
-            actions = [[policy.get_best_action(obs)]]
-        else:
-            actions = actions.eval()
+        # if profit < self.exploitation_threshold:
+        #     actions = [[policy.get_best_action(obs)]]
+        # else:
+        actions = actions.eval()
 
         logger.log('dynamics', ['max_profit'], [profit])
         if debug:
@@ -116,10 +116,10 @@ class Agent(object):
                 self.logger.log('dynamics', ['loss'], [loss])
 
             # train critic & actor
-            critic_loss = self.policy.train_critic(obs, n_obs, rewards, dones)
-            adv = self.policy.estimate_adv(obs, rewards, n_obs, dones)
-            actor_loss = self.policy.train_actor(obs, acts, logprobs, adv)
-            self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
+            # critic_loss = self.policy.train_critic(obs, n_obs, rewards, dones)
+            # adv = self.policy.estimate_adv(obs, rewards, n_obs, dones)
+            # actor_loss = self.policy.train_actor(obs, acts, logprobs, adv)
+            # self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
 
 if __name__ == '__main__':
     #  lets get ready to rumble
@@ -162,13 +162,13 @@ if __name__ == '__main__':
         'n_hidden': 2 
     }
     dynamics_rollout_args = {
-        'horizon': 30,
-        'num_rollouts': 200,
+        'horizon': 5,
+        'num_rollouts': 50,
     }
 
     # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
-        'density_train_itr': 100,
+        'density_train_itr': 20,
         'dynamics_train_itr': 10,
         'num_actions_taken_conseq': 10,
         # hyperparameterized

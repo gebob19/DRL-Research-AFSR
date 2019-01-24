@@ -40,7 +40,7 @@ class DynamicsModel(object):
         sa = tf.concat([state, action], axis=1)
         delta_pred = Network(sa, self.enc_dim, 'dynamics', self.hid_size, conv_depth=0, n_hidden_dense=self.n_hidden, reuse=reuse)
         n_state_pred = state + delta_pred
-        return n_state_pred    
+        return n_state_pred
     
     def update(self, state, action, n_state):
         loss, _ = self.sess.run([self.loss, self.update_step], feed_dict={
@@ -49,6 +49,7 @@ class DynamicsModel(object):
             self.n_state: n_state
         })
         return loss
+
 
     def get_best_actions(self, state, profit_fcn, num_actions):
         """ Given encoded state will return `num_rollouts` rollouts where each rollout is of size `horizon`.

@@ -5,7 +5,7 @@ import time
 import pickle
 from pathlib import Path
 
-def Network(input_tensor, output_size, scope, fsize, conv_depth, n_hidden_dense=0, activation=tf.tanh, output_activation=None, reuse=False):
+def Network(input_tensor, output_size, scope, fsize, conv_depth=0, n_hidden_dense=0, activation=tf.tanh, output_activation=None, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             x = input_tensor
             # Convolutions
@@ -37,8 +37,8 @@ class ReplayBuffer(object):
         self.nxt_obs.append(nxt_ob)
         self.dones.append(done)
         
-    def get_actions(self):
-        return np.asarray(self.obs), np.asarray(self.acts)
+    def get_obs_act_nobs(self):
+        return np.asarray(self.obs), np.asarray(self.acts), np.asarray(self.nxt_obs)
     
     def set_logprobs(self, logprobs):
         self.logprobs += list(logprobs)
@@ -113,8 +113,8 @@ class MasterBuffer(object):
     def get_temp_rewards(self):
         return np.asarray(self.temp_replay.rewards)
         
-    def get_actions(self):
-        return self.temp_replay.get_actions()
+    def get_obs_act_nobs(self):
+        return self.temp_replay.get_obs_act_nobs()
     
     def get_obs(self):
         return np.asarray(self.master_replay.obs)
@@ -188,9 +188,7 @@ class Logger(object):
     def __init__(self):
         self.logs = {
             'density': {
-                'logloss': [],
-                'kl': [],
-                'elbo': []
+                'loss': []
             },
             'dynamics': {
                 'loss': [],

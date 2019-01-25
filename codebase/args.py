@@ -21,7 +21,7 @@ def get_args(env):
         'out_size': 256,
         'n_layers': 4, 
         'n_hidden': 64,
-        'bonus_multiplier': 1
+        'bonus_multiplier': 1e-2
     }
 
     # Train to 1mil iterations -> other papers saw similar results 

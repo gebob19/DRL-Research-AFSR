@@ -17,8 +17,8 @@ from args import get_args
 if __name__ == '__main__':
     env = gym.make('MontezumaRevenge-v0')
     policy_graph_args, adv_args, rnd_args, agent_args = get_args(env)
-    replay_buffer = MasterBuffer(max_size=30000)
-    logger = Logger()
+    replay_buffer = MasterBuffer(max_size=30)
+    logger = Logger(max_size=5000)
 
     encoder = Encoder(150, 'imagenet', True, 'Encoder-TargetNetwork')
     policy = PPO(policy_graph_args, adv_args, encoder.x, encoder.encoded_tensor)
@@ -28,11 +28,12 @@ if __name__ == '__main__':
     # dynamics = DynamicsModel(dynamics_graph_args, dynamics_rollout_args)
     # training parameters
     exploitations_to_test = [np.random.randint(50, 100)]
-    n_iter = 40
-    num_samples = 200
+    n_iter = 150
+    num_samples = 20
     batch_size = 32
-    train = False
-    restore = True
+    train = True
+    restore = False
+    save = True
     
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
     tf_config.gpu_options.allow_growth = True
@@ -43,27 +44,34 @@ if __name__ == '__main__':
         agent.set_session(sess)
         if restore: 
             saver.restore(sess, "./model_data/model.ckpt")
+            agent.num_random_samples = 0
 
         if train:
-            print('Starting traininng...')
-            for itr in range(n_iter):
-                start = time.time()
-                agent.train(batch_size, num_samples, itr)
-                end = time.time()
-                print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
-                
-            logger.export()
-            print('Exported logs...')
-            saver.save(sess, './model_data/model.ckpt')
+            try:
+                print('Starting traininng...')
+                for itr in range(n_iter):
+                    start = time.time()
+                    agent.train(batch_size, num_samples, itr)
+                    end = time.time()
+                    print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
+                    print('size of logger:{}, size of buf:{}'.format(logger.size, len(replay_buffer.master_replay)))
+            finally: # safe exit sooner
+                logger.export()
+                if save:
+                    saver.save(sess, './model_data/model.ckpt')
         else: # view
             # saver.restore(sess, "./model_data/model-first.ckpt")
             obs = env.reset()
             while True:
                 env.render()
-                enc_ob = encoder.multi_t_resize([obs])
-                act = policy.get_best_action(enc_ob)
+                try:
+                    act = int(input('Press a key to continue...'))
+                except (ValueError, TypeError):
+                    act = 20
+                if act not in range(17):
+                    enc_ob = encoder.multi_t_resize([obs])
+                    act = policy.get_best_action(enc_ob)
                 obs, rew, done, _ = env.step(act)
-                input('Press a key to continue...')
                 if done: break
 
                 

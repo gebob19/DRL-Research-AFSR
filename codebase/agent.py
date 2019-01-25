@@ -32,7 +32,7 @@ class Agent(object):
         obs = self.env.reset()
         for _ in range(num_samples):
             # inject random samples into samples
-            if action_selection == 'random':
+            if action_selection == 'random' or np.random.uniform() <= self.p_rand_act:
                 act = self.env.action_space.sample()
             else:  # action_selection == algorithm 
                 enc_ob = self.encoder.multi_t_resize([obs])
@@ -54,7 +54,7 @@ class Agent(object):
         return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
         
     def get_data(self, batch_size, num_samples, itr):
-        if itr < self.num_random_samples or (np.random.uniform() <= self.p_rand_act and itr < self.max_ran_samples):
+        if itr < self.num_random_samples:
             return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
         
         if itr % self.algorithm_rollout_rate == 0:

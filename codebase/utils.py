@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import time
 import pickle
+from random import shuffle
 from pathlib import Path
 
 def Network(input_tensor, output_size, scope, fsize, conv_depth=0, n_hidden_dense=0, activation=tf.tanh, output_activation=None, reuse=False):
@@ -38,7 +39,7 @@ class ReplayBuffer(object):
         self.dones.append(done)
         
     def get_obs_act_nobs(self):
-        return np.asarray(self.obs), np.asarray(self.acts), np.asarray(self.nxt_obs)
+        return np.array(self.obs), np.array(self.acts), np.array(self.nxt_obs)
     
     def set_logprobs(self, logprobs):
         self.logprobs += list(logprobs)
@@ -57,19 +58,19 @@ class ReplayBuffer(object):
     
     def get_samples(self, indices):
         return (
-            np.asarray(self.obs)[indices],
-            np.asarray(self.acts)[indices],
-            np.asarray(self.rewards)[indices],
-            np.asarray(self.nxt_obs)[indices],
-            np.asarray(self.dones)[indices],
-            np.asarray(self.logprobs)[indices]
+            np.array(self.obs)[indices],
+            np.array(self.acts)[indices],
+            np.array(self.rewards)[indices],
+            np.array(self.nxt_obs)[indices],
+            np.array(self.dones)[indices],
+            np.array(self.logprobs)[indices]
         )
 
     def get_all(self, batch_size, shuffle=False, size=None):
-        if size is None: size = len(self.obs)
-        o, a, r, n, d, l = np.asarray(self.obs), np.asarray(self.acts), np.asarray(self.rewards), np.asarray(self.nxt_obs), np.asarray(self.dones), np.asarray(self.logprobs)
+        o, a, r, n, d, l = np.array(self.obs), np.array(self.acts), np.array(self.rewards), np.array(self.nxt_obs), np.array(self.dones), np.array(self.logprobs)
         if shuffle:
-            indxs = np.random.randint(0, len(o), size)
+            indxs = np.arange(o.shape[0])
+            np.random.shuffle(indxs)
             o, a, r, n, d, l = o[indxs], a[indxs], r[indxs], n[indxs], d[indxs], l[indxs]
         batched_dsets = []
         # batch up data
@@ -77,7 +78,7 @@ class ReplayBuffer(object):
             bdset = []
             for i in range(0, len(dset), batch_size):
                  bdset.append(np.array(dset[i:i+batch_size]))
-            batched_dsets.append(np.asarray(bdset))
+            batched_dsets.append(np.array(bdset))
         return tuple(batched_dsets)
     
     def update_size(self):
@@ -111,13 +112,13 @@ class MasterBuffer(object):
         self.temp_replay.record(*args)
 
     def get_temp_rewards(self):
-        return np.asarray(self.temp_replay.rewards)
+        return np.array(self.temp_replay.rewards)
         
     def get_obs_act_nobs(self):
         return self.temp_replay.get_obs_act_nobs()
     
     def get_obs(self):
-        return np.asarray(self.master_replay.obs)
+        return np.array(self.master_replay.obs)
     
     def set_logprobs(self, logprobs):
         self.temp_replay.logprobs = logprobs
@@ -185,7 +186,9 @@ class MasterBuffer(object):
         self.master_replay.flush()
 
 class Logger(object):
-    def __init__(self):
+    def __init__(self, max_size):
+        self.max_size = max_size
+        self.size = 0
         self.logs = {
             'density': {
                 'loss': []
@@ -207,6 +210,12 @@ class Logger(object):
     def log(self, tag, subtags, data):
         for subtag, d in zip(subtags, data):
             self.logs[tag][subtag].append(d)
+        self.size += 1
+        
+        if self.size > self.max_size:
+            self.export()
+            self.flush()
+            self.size = 0
 
     def export(self):
         fname = '{}.pkl'.format(time.time())

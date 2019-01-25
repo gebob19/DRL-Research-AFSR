@@ -17,6 +17,7 @@ class Agent(object):
         self.num_actions_taken_conseq = args['num_actions_taken_conseq']
         self.num_random_samples = args['num_random_samples']
         self.algorithm_rollout_rate = args['algorithm_rollout_rate']
+        self.log_rate = args['log_rate']
         
     def set_session(self, sess):
         self.sess = sess
@@ -26,13 +27,13 @@ class Agent(object):
         # self.dynamics.set_session(sess)
         
     def sample_env(self, batch_size, num_samples, shuffle, action_selection):
-        print('starting sample...')
         obs = self.env.reset()
         for _ in range(num_samples):
             if action_selection == 'random':
                 act = self.env.action_space.sample()
             else:  # action_selection == algorithm 
-                act = self.policy.get_best_action(obs)
+                enc_ob = self.encoder.multi_t_resize([obs])
+                act = self.policy.get_best_action(enc_ob)
             n_ob, rew, done, _ = self.env.step(act)
             self.replay_buffer.record(obs, act, rew, n_ob, done)
             obs = n_ob if not done else self.env.reset()
@@ -61,7 +62,6 @@ class Agent(object):
     def train(self, batch_size, num_samples, itr):
         obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.get_data(batch_size, num_samples, itr)
         self.replay_buffer.flush_temp()
-        print('starting training...')
         # process all data in batches 
         for obs, acts, rewards, n_obs, dones, logprobs in zip(obsList, actsList, rewardsList, n_obsList, donesList, logprobsList):
             # # update dynamics 
@@ -73,10 +73,12 @@ class Agent(object):
 
             for _ in range(self.rnd_train_itr):
                 rnd_loss = self.rnd.train(obs)
-                self.logger.log('density', ['loss'], [rnd_loss])
 
             total_rewards = self.rnd.modify_rewards(obs, rewards)
             critic_loss = self.policy.train_critic(obs, n_obs, total_rewards, dones)
             adv = self.policy.estimate_adv(obs, total_rewards, n_obs, dones)
             actor_loss = self.policy.train_actor(obs, acts, logprobs, adv)
-            self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
+           
+            if itr % self.log_rate:
+                self.logger.log('density', ['loss'], [rnd_loss])
+                self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])

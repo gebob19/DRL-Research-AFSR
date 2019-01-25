@@ -7,9 +7,10 @@ def get_args(env):
         'n_hidden': 5,
         'hid_size': 32,
         'learning_rate': 5e-3,
-        'num_target_updates': 1,
-        'num_grad_steps_per_target_update': 1
+        'num_target_updates': 5,
+        'num_grad_steps_per_target_update': 5
     }
+
     adv_args = {
         'gamma': 0.9999999
     }
@@ -25,13 +26,14 @@ def get_args(env):
 
     # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
-        'rnd_train_itr': 1,
+        'rnd_train_itr': 2,
         'dynamics_train_itr': 1,
         'num_actions_taken_conseq': 10,
         # hyperparameterized
         'exploitation_threshold': 0,
-        'num_random_samples': 100,
-        'algorithm_rollout_rate': 2
+        'num_random_samples': 10,
+        'algorithm_rollout_rate': 2,
+        'log_rate': 5
     }
 
     return policy_graph_args, adv_args, rnd_args, agent_args

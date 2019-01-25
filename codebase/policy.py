@@ -52,9 +52,10 @@ class PPO(object):
         logprob = tf.placeholder(shape=(None,), name='logprob', dtype=tf.float32)
         return act, adv, logprob
         
-    def get_best_action(self, observation):
+    def get_best_action(self, obs):
+        # obs must be shape (1, ob_dim)
         return self.sess.run(self.greedy_action, feed_dict={
-            self.obs_ph: [observation]
+            self.obs_ph: obs
         })[0]
 
     def get_act_distrib(self, obs):

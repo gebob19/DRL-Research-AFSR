@@ -25,8 +25,7 @@ if __name__ == '__main__':
     rnd = RND(encoder, 60, rnd_args)
     # TODO: Multithreaded image resizing to (224, 224, 3)
     agent = Agent(env, policy, encoder, rnd, replay_buffer, logger, agent_args)
-
-    # dynamics = DynamicsModel(dynamics_graph_args, dynamics_rollout_args)
+    dynamics = DynamicsModel(dynamics_graph_args, dynamics_rollout_args)
     # training parameters
     exploitations_to_test = [np.random.randint(50, 100)]
     n_iter = 1

@@ -18,6 +18,8 @@ class Agent(object):
         self.num_random_samples = args['num_random_samples']
         self.algorithm_rollout_rate = args['algorithm_rollout_rate']
         self.log_rate = args['log_rate']
+        self.p_rand_act = args['p_rand']
+        self.max_ran_samples = args['max_ran_samples']
         
     def set_session(self, sess):
         self.sess = sess
@@ -29,6 +31,7 @@ class Agent(object):
     def sample_env(self, batch_size, num_samples, shuffle, action_selection):
         obs = self.env.reset()
         for _ in range(num_samples):
+            # inject random samples into samples
             if action_selection == 'random':
                 act = self.env.action_space.sample()
             else:  # action_selection == algorithm 
@@ -51,7 +54,7 @@ class Agent(object):
         return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
         
     def get_data(self, batch_size, num_samples, itr):
-        if itr < self.num_random_samples:
+        if itr < self.num_random_samples or (np.random.uniform() <= self.p_rand_act and itr < self.max_ran_samples):
             return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
         
         if itr % self.algorithm_rollout_rate == 0:

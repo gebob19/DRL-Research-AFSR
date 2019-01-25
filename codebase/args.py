@@ -5,7 +5,7 @@ def get_args(env):
         'act_dim': env.action_space.n,
         'clip_range': 0.2,
         'n_hidden': 5,
-        'hid_size': 32,
+        'hid_size': 64,
         'learning_rate': 5e-3,
         'num_target_updates': 5,
         'num_grad_steps_per_target_update': 5
@@ -33,7 +33,9 @@ def get_args(env):
         'exploitation_threshold': 0,
         'num_random_samples': 10,
         'algorithm_rollout_rate': 2,
-        'log_rate': 5
+        'log_rate': 5,
+        'p_rand': 0.5,
+        'max_ran_samples': 100
     }
 
     return policy_graph_args, adv_args, rnd_args, agent_args

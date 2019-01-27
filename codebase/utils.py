@@ -6,23 +6,24 @@ import pickle
 from random import shuffle
 from pathlib import Path
 
-def Network(input_tensor, output_size, scope, fsize, conv_depth=0, n_hidden_dense=0, activation=tf.tanh, output_activation=None, reuse=False, n_strides=None):
+def Network(input_tensor, output_size, scope, fsize, conv_depth=0, n_hidden_dense=0, activation=tf.tanh, 
+            output_activation=None, reuse=False, n_strides=None, kernel_init=None):
         with tf.variable_scope(scope, reuse=reuse):
             x = input_tensor
             if n_strides == None: n_strides = conv_depth
             strides_count = 0
             # Convolutions
             for _ in range(conv_depth):
-                x = tf.layers.conv2d(x, fsize, (3, 3), activation='relu')
+                x = tf.layers.conv2d(x, fsize, (3, 3), activation='relu', kernel_initializer=kernel_init)
                 if strides_count < n_strides:
-                    x = tf.layers.conv2d(x, fsize, (3, 3), strides=(2, 2))
+                    x = tf.layers.conv2d(x, fsize, (3, 3), strides=(2, 2), kernel_initializer=kernel_init)
                     strides_count += 1
             
             # Dense Layers
             x = tf.layers.flatten(x)
             for _ in range(n_hidden_dense):
-                x = tf.layers.dense(x, fsize, activation=activation)
-            y = tf.layers.dense(x, output_size, activation=output_activation)
+                x = tf.layers.dense(x, fsize, activation=activation, kernel_initializer=kernel_init)
+            y = tf.layers.dense(x, output_size, activation=output_activation, kernel_initializer=kernel_init)
         return y
 
 class ReplayBuffer(object):

@@ -28,13 +28,12 @@ if __name__ == '__main__':
 
     agent = Agent(env, policy, encoder, rnd, replay_buffer, logger, agent_args)
 
-    # dynamics = DynamicsModel(dynamics_graph_args, dynamics_rollout_args)
     # training parameters
     exploitations_to_test = [np.random.randint(50, 100)]
     n_iter = 100
     num_samples = 200
     batch_size = 64
-    train = False
+    train = True
     restore = False
     save = False
     

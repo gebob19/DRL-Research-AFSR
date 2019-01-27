@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 def get_args(env, test_run=False):
 
     policy_graph_args = {
@@ -27,12 +29,14 @@ def get_args(env, test_run=False):
     target_N = {
         'fsize': 64,
         'conv_depth': 4,
-        'n_layers': 8
+        'n_layers': 8,
+        'kernel_init': tf.initializers.random_uniform
     }
     pred_N = {
         'fsize': 64,
         'conv_depth': 3,
-        'n_layers': 3
+        'n_layers': 3,
+        'kernel_init': tf.initializers.random_uniform
     }
     rnd_args = {
         'learning_rate': 1e-2,

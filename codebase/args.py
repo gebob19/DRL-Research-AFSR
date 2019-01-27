@@ -1,5 +1,5 @@
 def get_args(env, test_run=False):
-
+    
     policy_graph_args = {
         'ob_dim': env.observation_space.shape,
         'act_dim': env.action_space.n,
@@ -46,7 +46,7 @@ def get_args(env, test_run=False):
     agent_args = {
         'rnd_train_itr': 2,
         'encoder_train_itr': 5,
-        'num_actions_taken_conseq': 10,
+        'num_conseq_rand_act': 10,
         'num_random_samples': 20,
         'p_rand': 0.6,                  # p(random action during rollout)
         'algorithm_rollout_rate': 2,

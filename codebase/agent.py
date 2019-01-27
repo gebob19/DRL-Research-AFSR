@@ -16,7 +16,7 @@ class Agent(object):
         self.rnd_train_itr = args['rnd_train_itr']
         self.encoder_train_itr = args['encoder_train_itr']
 
-        self.num_actions_taken_conseq = args['num_actions_taken_conseq']
+        self.num_conseq_rand_act = args['num_conseq_rand_act']
         self.num_random_samples = args['num_random_samples']
         self.algorithm_rollout_rate = args['algorithm_rollout_rate']
         self.log_rate = args['log_rate']
@@ -31,10 +31,16 @@ class Agent(object):
         
     def sample_env(self, batch_size, num_samples, shuffle, action_selection):
         obs = self.env.reset()
+        takingRandom = False
+        num_rand = 0
         for _ in range(num_samples):
+            if num_rand == self.num_conseq_rand_act: takingRandom = False
             # inject random samples into samples
-            if action_selection == 'random' or np.random.uniform() <= self.p_rand_act:
+            if action_selection == 'random' or np.random.uniform() <= self.p_rand_act or takingRandom:
                 act = self.env.action_space.sample()
+                if not takingRandom: 
+                    takingRandom = True
+                    num_rand = 1
             else:  # action_selection == algorithm 
                 enc_ob = self.encoder.get_encoding([obs])
                 act = self.policy.get_best_action(enc_ob)

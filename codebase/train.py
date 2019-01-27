@@ -16,7 +16,22 @@ from args import get_args
 
 if __name__ == '__main__':
     env = gym.make('MontezumaRevenge-v0')
-    policy_graph_args, adv_args, encoder_args, rnd_args, agent_args = get_args(env, test_run=True)
+    n_iter = 100
+    num_samples = 200
+    batch_size = 64
+
+    test_run = True
+    
+    train = True
+    restore = False
+    save = False
+
+    if test_run:
+        num_samples = 10
+        n_iter = 5
+        batch_size = 8
+
+    policy_graph_args, adv_args, encoder_args, rnd_args, agent_args = get_args(env, test_run=test_run)
     replay_buffer = MasterBuffer(max_size=3000)
     logger = Logger(max_size=100000)
 
@@ -30,13 +45,6 @@ if __name__ == '__main__':
 
     # dynamics = DynamicsModel(dynamics_graph_args, dynamics_rollout_args)
     # training parameters
-    exploitations_to_test = [np.random.randint(50, 100)]
-    n_iter = 100
-    num_samples = 200
-    batch_size = 64
-    train = False
-    restore = False
-    save = False
     
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
     tf_config.gpu_options.allow_growth = True

@@ -1,5 +1,3 @@
-import tensorflow as tf
-
 def get_args(env, test_run=False):
 
     policy_graph_args = {
@@ -7,7 +5,6 @@ def get_args(env, test_run=False):
         'act_dim': env.action_space.n,
         'clip_range': 0.2,
         'n_hidden': 5,
-        'conv_depth': 5,
         'hid_size': 64,
         'learning_rate': 5e-3,
         'num_target_updates': 10,
@@ -30,14 +27,12 @@ def get_args(env, test_run=False):
     target_N = {
         'fsize': 64,
         'conv_depth': 4,
-        'n_layers': 8,
-        'kernel_init': tf.initializers.random_uniform
+        'n_layers': 8
     }
     pred_N = {
         'fsize': 64,
         'conv_depth': 3,
-        'n_layers': 3,
-        'kernel_init': tf.initializers.random_uniform
+        'n_layers': 3
     }
     rnd_args = {
         'learning_rate': 1e-2,

@@ -16,24 +16,27 @@ from args import get_args
 
 if __name__ == '__main__':
     env = gym.make('MontezumaRevenge-v0')
-    policy_graph_args, adv_args, rnd_args, agent_args = get_args(env)
+    policy_graph_args, adv_args, encoder_args, rnd_args, agent_args = get_args(env, test_run=True)
     replay_buffer = MasterBuffer(max_size=30)
     logger = Logger(max_size=5000)
 
-    encoder = Encoder(150, 'imagenet', True, 'Encoder-TargetNetwork')
-    policy = PPO(policy_graph_args, adv_args, encoder.x, encoder.encoded_tensor)
-    rnd = RND(encoder, 60, rnd_args)
+    encoder = Encoder(encoder_args)
+    obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
+
+    policy = PPO(policy_graph_args, adv_args, obs_encoded_shape)
+    rnd = RND(obs_encoded_shape, rnd_args)
+
     agent = Agent(env, policy, encoder, rnd, replay_buffer, logger, agent_args)
 
     # dynamics = DynamicsModel(dynamics_graph_args, dynamics_rollout_args)
     # training parameters
     exploitations_to_test = [np.random.randint(50, 100)]
-    n_iter = 150
-    num_samples = 20
-    batch_size = 32
+    n_iter = 2
+    num_samples = 10
+    batch_size = 5
     train = True
     restore = False
-    save = True
+    save = False
     
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
     tf_config.gpu_options.allow_growth = True
@@ -56,8 +59,8 @@ if __name__ == '__main__':
                     print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
                     print('size of logger:{}, size of buf:{}'.format(logger.size, len(replay_buffer.master_replay)))
             finally: # safe exit sooner
-                logger.export()
                 if save:
+                    logger.export()
                     saver.save(sess, './model_data/model.ckpt')
         else: # view
             # saver.restore(sess, "./model_data/model-first.ckpt")

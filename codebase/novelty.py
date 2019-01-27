@@ -1,34 +1,60 @@
-from keras.applications.resnet50 import ResNet50
 import tensorflow as tf
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import cv2
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from keras.applications.resnet50 import ResNet50
 from keras import backend as K
 K.set_learning_phase(1) 
 
+from utils import Network
+
 class Encoder(object):
-    def __init__(self, extract_layer, weights, freeze, scope):
-        self.extract_layer = extract_layer
-        # build graph
-        self.x = tf.keras.backend.placeholder(shape=(None, 224, 224, 3), dtype=tf.float32)
-        x = ResNet50(include_top=False, weights=weights, input_tensor=self.x)
-        if freeze: self.freeze(x)
+    def __init__(self, graph_args):
+        self.act_dim = graph_args['act_dim']
+        self.n_layers_frozen = graph_args['n_layers_frozen']
+        self.act_layer_extract = graph_args['act_layer_extract']
+        self.learning_rate = graph_args['learning_rate']
+
+        assert self.n_layers_frozen < self.act_layer_extract, 'Cannot freeze before action extraction'
+
+        # action neural network params
+        actnn_layers = graph_args['actnn_layers']
+        actnn_units = graph_args['actnn_units']
+
+        self.obs_ph = tf.placeholder(shape=(None, 224, 224, 3), dtype=tf.float32) # obs_i
+        self.prev_act_ph = tf.placeholder(shape=(None,), dtype=tf.int32)  # act_i-1
+
+        nn = ResNet50(include_top=False, weights='imagenet', input_tensor=self.obs_ph)
+        self.freeze(nn)
                 
-        x = x.layers[self.extract_layer].output
-        self.encoded_tensor = tf.layers.flatten(x)
+        self.obs_encoded = nn.layers[self.act_layer_extract].output
+        self.actnn_pred = dense_pass(self.obs_encoded, self.act_dim, actnn_layers, actnn_units)
+        
+        action_enc = tf.one_hot(self.prev_act_ph, depth=self.act_dim)
+        self.loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.actnn_pred, labels=action_enc)
+        self.train_step = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
     def freeze(self, x):
-        for layer in x.layers[:self.extract_layer+1]: 
-            layer.trainable = False 
+        for layer in x.layers[:self.n_layers_frozen]:
+            layer.trainable = False
     
     def set_sess(self, sess):
         self.sess = sess
     
     def get_encoding(self, obs_n):
         resized_obs = self.multi_t_resize(obs_n)
-        return self.sess.run(self.encoded_tensor, feed_dict={
-            self.x: resized_obs
+        return self.sess.run(self.obs_encoded, feed_dict={
+            self.obs_ph: resized_obs 
         })
+    
+    def train(self, obs_n, act_n):
+        obs_n, prev_act_n = obs_n[1:], act_n[:-1]
+        resized_obs = self.multi_t_resize(obs_n)
+        loss, _ = self.sess.run([self.loss, self.train_step], feed_dict={
+            self.obs_ph: resized_obs,
+            self.prev_act_ph: prev_act_n
+        })
+        return loss
     
     def multi_t_resize(self, obs_n):
         with ThreadPoolExecutor(8) as e: pre_resized_obs = [e.submit(resize, obs) for obs in obs_n]
@@ -39,47 +65,48 @@ def resize(obs):
     return cv2.resize(obs, (224, 224))
 
 class RND(object):
-    def __init__(self, target_network, rn_layer, graph_args):
+    def __init__(self, in_shape, graph_args):
+        target_args, pred_args = graph_args['target_args'], graph_args['pred_args']
         self.learning_rate = graph_args['learning_rate']
-        out_size = graph_args['out_size']
-        n_layers = graph_args['n_layers']
-        n_hidden = graph_args['n_hidden']
         self.bonus_multi = graph_args['bonus_multiplier']
-        
-        assert isinstance(target_network, Encoder), 'Target Network must be Encoder'
+        self.out_size = graph_args['out_size']
 
-        self.target_network = target_network
-        self.random_network = Encoder(rn_layer, None, False, 'RND')
+        self.enc_obs = tf.placeholder(shape=in_shape, dtype=tf.float32)
 
-        assert n_layers % 2 == 0, 'rnd n_layers must be divisible by 2'
-
-        self.target_output = dense_pass(self.target_network.encoded_tensor, out_size, n_layers//2, n_hidden)
-        self.rn_pred = dense_pass(self.random_network.encoded_tensor, out_size, n_layers, n_hidden)
-
-        self.loss = tf.losses.mean_squared_error(self.target_output, self.rn_pred)
+        # f(o*) and f*(o*)
+        self.target_output = self.set_network(self.enc_obs, target_args, 'rnd_targetN')
+        self.pred_output = self.set_network(self.enc_obs, pred_args, 'rnd_predictorN')
+        # print(self.target_output, self.pred_output)
+        self.loss = tf.losses.mean_squared_error(self.target_output, self.pred_output)
         self.update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+
+    def set_network(self, ph, args, scope):
+        fsize = args['fsize']
+        conv_depth = args['conv_depth']
+        n_layers = args['n_layers']
+        network_output = Network(ph, self.out_size, scope, fsize, conv_depth, n_layers)
+        return network_output
 
     def set_sess(self, sess):
         self.sess = sess
 
-    def get_rewards(self, obs):
+    def get_rewards(self, enc_obs_n):
         return self.sess.run(self.loss, feed_dict={
-            self.target_network.x: obs,
-            self.random_network.x: obs
+            self.enc_obs: enc_obs_n,
         })
 
-    def modify_rewards(self, obs, rewards):
-        extr_rewards = self.get_rewards(obs)
+    def modify_rewards(self, enc_obs_n, rewards):
+        extr_rewards = self.get_rewards(enc_obs_n)
         return rewards + self.bonus_multi * extr_rewards
     
-    def train(self, obs):
+    def train(self, enc_obs_n):
         loss, _ = self.sess.run([self.loss, self.update_op], feed_dict={
-            self.target_network.x: obs,
-            self.random_network.x: obs
+            self.enc_obs: enc_obs_n,
         })
         return loss  
 
-def dense_pass(x, out_size, num_layers, n_hidd):
+def dense_pass(x, out_size, num_layers, units, output_activation=None):
+    x = tf.layers.flatten(x)
     for _ in range(num_layers):
-        x = tf.layers.dense(x, n_hidd, activation=None)
-    return tf.layers.dense(x, out_size, activation=None)
+        x = tf.layers.dense(x, units, activation=tf.tanh)
+    return tf.layers.dense(x, out_size, activation=output_activation)

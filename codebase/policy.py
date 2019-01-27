@@ -3,7 +3,7 @@ import numpy as np
 from utils import Network
 
 class PPO(object):
-    def __init__(self, graph_args, adv_args, obs_ph, enc_tensor):
+    def __init__(self, graph_args, adv_args, in_shape):
         self.ob_dim = graph_args['ob_dim']
         self.act_dim = graph_args['act_dim']
         clip_range = graph_args['clip_range']
@@ -17,12 +17,11 @@ class PPO(object):
         
         self.gamma = adv_args['gamma']
         
-        self.obs_ph = obs_ph
         self.act, self.adv, self.old_logprob = self.define_placeholders()
-        self.enc_tensor = enc_tensor
+        self.obs_enc = tf.placeholder(shape=in_shape, dtype=tf.float32)
         
         # policy / actor evaluation with encoded state
-        self.policy_distrib = Network(self.enc_tensor, self.act_dim, 'policy', hid_size, n_hidden_dense=n_hidden)
+        self.policy_distrib = Network(self.obs_enc, self.act_dim, 'policy', hid_size, n_hidden_dense=n_hidden)
         self.greedy_action = tf.argmax(self.policy_distrib, axis=1)
 
         action_enc = tf.one_hot(self.act, depth=self.act_dim)
@@ -37,7 +36,7 @@ class PPO(object):
         self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.actor_loss)
         
         # critic definition with encoded state
-        self.v_pred = tf.squeeze(Network(enc_tensor, 1, 'critic', hid_size, n_hidden_dense=n_hidden))
+        self.v_pred = tf.squeeze(Network(self.obs_enc, 1, 'critic', hid_size, n_hidden_dense=n_hidden))
         self.v_target = tf.placeholder(shape=(None,), name='v_target', dtype=tf.float32)
         self.critic_loss = tf.losses.mean_squared_error(self.v_target, self.v_pred)
         # minimize with respect to correct variables HERE
@@ -52,26 +51,26 @@ class PPO(object):
         logprob = tf.placeholder(shape=(None,), name='logprob', dtype=tf.float32)
         return act, adv, logprob
         
-    def get_best_action(self, obs):
+    def get_best_action(self, enc_obs):
         # obs must be shape (1, ob_dim)
         return self.sess.run(self.greedy_action, feed_dict={
-            self.obs_ph: obs
+            self.obs_enc: enc_obs
         })[0]
 
     def get_act_distrib(self, obs):
         return self.sess.run(self.policy_distrib, feed_dict={
-            self.obs_ph: [obs]
+            self.obs_enc: [obs]
         })[0]
-    
+
     def get_logprob(self, n_obs, n_act):
         return self.sess.run(self.logprob, feed_dict={
-            self.obs_ph: n_obs,
+            self.obs_enc: n_obs,
             self.act: n_act
         })
     
     def estimate_adv(self, obs, rew, nxt_obs, dones):
-        v_obs = self.sess.run(self.v_pred, feed_dict={self.obs_ph: obs})
-        v_nxt_obs = self.sess.run(self.v_pred, feed_dict={self.obs_ph: nxt_obs})
+        v_obs = self.sess.run(self.v_pred, feed_dict={self.obs_enc: obs})
+        v_nxt_obs = self.sess.run(self.v_pred, feed_dict={self.obs_enc: nxt_obs})
         y_obs = rew + (1 - dones) * self.gamma * v_nxt_obs
         adv = y_obs - v_obs
         
@@ -80,7 +79,7 @@ class PPO(object):
     
     def train_actor(self, obs, act, logprob, adv):
         loss, _ = self.sess.run([self.actor_loss, self.actor_update_op], feed_dict={
-            self.obs_ph: obs,
+            self.obs_enc: obs,
             self.act: act,
             self.adv: adv,
             self.old_logprob: logprob
@@ -90,8 +89,8 @@ class PPO(object):
     def train_critic(self, obs, nxt_obs, rew, dones):
         for i in range(self.num_grad_steps_per_target_update * self.num_target_updates):
             if i % self.num_grad_steps_per_target_update == 0:
-                v_pred = self.sess.run(self.v_pred, feed_dict={self.obs_ph: nxt_obs})
+                v_pred = self.sess.run(self.v_pred, feed_dict={self.obs_enc: nxt_obs})
                 y = rew + self.gamma * v_pred * (1 - dones)
             _, loss = self.sess.run([self.critic_update_op, self.critic_loss],
-                                    feed_dict={self.obs_ph: obs, self.v_target: y})
+                                    feed_dict={self.obs_enc: obs, self.v_target: y})
         return loss

@@ -193,9 +193,8 @@ class Logger(object):
             'density': {
                 'loss': []
             },
-            'dynamics': {
-                'loss': [],
-                'max_profit': []
+            'encoder': {
+                'loss': []
             },
             'policy': {
                 'actor_loss':[],
@@ -229,15 +228,16 @@ class Logger(object):
     def flush(self):
         self.logs = {
             'density': {
-                'logloss': [],
-                'kl': [],
-                'elbo': []
+                'loss': []
             },
-            'dynamics': {
+            'encoder': {
                 'loss': []
             },
             'policy': {
                 'actor_loss':[],
                 'critic_loss':[],
+            },
+            'env': {
+                'rewards': []
             }
         }

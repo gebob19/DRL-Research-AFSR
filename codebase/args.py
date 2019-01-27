@@ -7,6 +7,7 @@ def get_args(env, test_run=False):
         'act_dim': env.action_space.n,
         'clip_range': 0.2,
         'n_hidden': 5,
+        'conv_depth': 5,
         'hid_size': 64,
         'learning_rate': 5e-3,
         'num_target_updates': 10,

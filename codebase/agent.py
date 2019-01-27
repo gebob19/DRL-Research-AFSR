@@ -69,17 +69,14 @@ class Agent(object):
             for _ in range(self.encoder_train_itr):
                 enc_loss = self.encoder.train(obs, acts)
 
-            # TODO shuffle batch here
             enc_obs = self.encoder.get_encoding(obs)
-            enc_n_obs = self.encoder.get_encoding(n_obs)
-
             for _ in range(self.rnd_train_itr):
                 rnd_loss = self.rnd.train(enc_obs)
 
-            total_rewards = self.rnd.modify_rewards(enc_obs, rewards)
-            critic_loss = self.policy.train_critic(enc_obs, enc_n_obs, total_rewards, dones)
-            adv = self.policy.estimate_adv(enc_obs, total_rewards, enc_n_obs, dones)
-            actor_loss = self.policy.train_actor(enc_obs, acts, logprobs, adv)
+            total_rewards = self.rnd.modify_rewards(obs, rewards)
+            critic_loss = self.policy.train_critic(obs, n_obs, total_rewards, dones)
+            adv = self.policy.estimate_adv(obs, total_rewards, n_obs, dones)
+            actor_loss = self.policy.train_actor(obs, acts, logprobs, adv)
            
             if itr % self.log_rate:
                 self.logger.log('density', ['loss'], [rnd_loss])

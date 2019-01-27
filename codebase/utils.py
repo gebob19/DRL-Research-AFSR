@@ -88,7 +88,7 @@ class ReplayBuffer(object):
             self.obs = self.obs[-diff:]
             self.acts = self.acts[-diff:]
             self.rewards = self.rewards[-diff:]
-            self.nxt_obs = self.acts[-diff:]
+            self.nxt_obs = self.nxt_obs[-diff:]
             self.dones = self.dones[-diff:]
             self.logprobs = self.logprobs[-diff:]
     

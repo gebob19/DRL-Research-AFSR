@@ -76,6 +76,8 @@ class ReplayBuffer(object):
             indxs = np.arange(o.shape[0])
             np.random.shuffle(indxs)
             o, a, r, n, d, l = o[indxs], a[indxs], r[indxs], n[indxs], d[indxs], l[indxs]
+        if size is not None:
+            o, a, r, n, d, l = o[-size:], a[-size:], r[-size:], n[-size:], d[-size:], l[-size:]
         batched_dsets = []
         # batch up data
         for dset in [o, a, r, n, d, l]:

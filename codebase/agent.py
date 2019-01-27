@@ -31,9 +31,10 @@ class Agent(object):
         
     def sample_env(self, batch_size, num_samples, shuffle, action_selection):
         obs = self.env.reset()
+        done, i = False, 0
         takingRandom = False
         num_rand = 0
-        for _ in range(num_samples):
+        while i < num_samples and (not done or i > (100 + num_samples)):
             if num_rand == self.num_conseq_rand_act: takingRandom = False
             # inject random samples into samples
             if action_selection == 'random' or np.random.uniform() <= self.p_rand_act or takingRandom:
@@ -46,7 +47,12 @@ class Agent(object):
                 act = self.policy.get_best_action(enc_ob)
             n_ob, rew, done, _ = self.env.step(act)
             self.replay_buffer.record(obs, act, rew, n_ob, done)
-            obs = n_ob if not done else self.env.reset()
+            if not done:
+                obs = n_ob
+            else:
+                obs = self.env.reset()
+                done = True
+            i += 1
         
         # sync logger work
         obs_n, act_n, _ = self.replay_buffer.get_obs_act_nobs()
@@ -75,6 +81,8 @@ class Agent(object):
             for _ in range(self.encoder_train_itr):
                 enc_loss = self.encoder.train(obs, acts)
 
+            
+
             # TODO shuffle batch here
             enc_obs = self.encoder.get_encoding(obs)
             enc_n_obs = self.encoder.get_encoding(n_obs)
@@ -91,3 +99,8 @@ class Agent(object):
                 self.logger.log('density', ['loss'], [rnd_loss])
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
                 self.logger.log('encoder', ['loss'], [enc_loss])
+
+    def shuffle(self, o, a, r, n, d, l):
+        indxs = np.arange(o.shape[0])
+        np.random.shuffle(indxs)
+        return o[indxs], a[indxs], r[indxs], n[indxs], d[indxs], l[indxs]

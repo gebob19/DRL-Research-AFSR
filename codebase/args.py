@@ -1,3 +1,6 @@
+import tensorflow as tf
+
+
 def get_args(env, test_run=False):
     
     policy_graph_args = {
@@ -7,8 +10,8 @@ def get_args(env, test_run=False):
         'n_hidden': 5,
         'hid_size': 64,
         'learning_rate': 5e-3,
-        'num_target_updates': 10,
-        'num_grad_steps_per_target_update': 10
+        'num_target_updates': 1,
+        'num_grad_steps_per_target_update': 2
     }
 
     adv_args = {
@@ -20,36 +23,38 @@ def get_args(env, test_run=False):
         'n_layers_frozen': 5,
         'act_layer_extract': 20,
         'learning_rate': 1e-3,
-        'actnn_layers': 1,
+        'actnn_layers': 2,
         'actnn_units': 128
     }
 
     target_N = {
-        'fsize': 64,
-        'conv_depth': 4,
-        'n_layers': 8
+        'fsize': 32,
+        'conv_depth': 5,
+        'n_layers': 1,
+        'kernel_init': tf.initializers.variance_scaling(scale=20)
     }
     pred_N = {
         'fsize': 64,
         'conv_depth': 3,
-        'n_layers': 3
+        'n_layers': 3,
+        'kernel_init': tf.initializers.variance_scaling()
     }
     rnd_args = {
         'learning_rate': 1e-2,
         # paper used 512
-        'out_size': 256,
-        'bonus_multiplier': 1e-2,
+        'out_size': 512,
+        'bonus_multiplier': 1,
         'target_args': target_N,
         'pred_args': pred_N
     }
     # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
-        'rnd_train_itr': 2,
+        'rnd_train_itr': 1,
         'encoder_train_itr': 5,
         'num_conseq_rand_act': 10,
-        'num_random_samples': 20,
-        'p_rand': 0.6,                  # p(random action during rollout)
-        'algorithm_rollout_rate': 2,
+        'num_random_samples': 10,
+        'p_rand': 0.5,                  # p(random action during rollout)
+        'algorithm_rollout_rate': 1,
         'log_rate': 5,
     }
 

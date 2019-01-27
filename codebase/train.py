@@ -17,14 +17,14 @@ from args import get_args
 if __name__ == '__main__':
     env = gym.make('MontezumaRevenge-v0')
     n_iter = 100
-    num_samples = 200
-    batch_size = 64
+    num_samples = 300
+    batch_size = 32
 
-    test_run = True
+    test_run = False
     
-    train = True
-    restore = False
-    save = False
+    train = False
+    restore = True
+    save = True
 
     if test_run:
         num_samples = 10
@@ -55,7 +55,7 @@ if __name__ == '__main__':
         agent.set_session(sess)
         if restore: 
             saver.restore(sess, "./model_data/model.ckpt")
-            agent.num_random_samples = 0
+            agent.num_random_samples = 5
 
         if train:
             try:

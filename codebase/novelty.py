@@ -47,8 +47,7 @@ class Encoder(object):
             self.obs_ph: resized_obs 
         })
     
-    def train(self, obs_n, act_n):
-        obs_n, prev_act_n = obs_n[1:], act_n[:-1]
+    def train(self, obs_n, prev_act_n):
         resized_obs = self.multi_t_resize(obs_n)
         loss, _ = self.sess.run([self.loss, self.train_step], feed_dict={
             self.obs_ph: resized_obs,

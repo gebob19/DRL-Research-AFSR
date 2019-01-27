@@ -75,15 +75,15 @@ class Agent(object):
     def train(self, batch_size, num_samples, itr):
         obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.get_data(batch_size, num_samples, itr)
         self.replay_buffer.flush_temp()
+        obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.shuffle(obsList, actsList, rewardsList, n_obsList, donesList, logprobsList)
         # process all data in batches 
         for obs, acts, rewards, n_obs, dones, logprobs in zip(obsList, actsList, rewardsList, n_obsList, donesList, logprobsList):
             
             for _ in range(self.encoder_train_itr):
-                enc_loss = self.encoder.train(obs, acts)
+                eobs_n, eprev_act_n = self.enc_shuffle(obs[1:], acts[:-1])
+                enc_loss = self.encoder.train(eobs_n, eprev_act_n)
 
-            
-
-            # TODO shuffle batch here
+            obs, acts, rewards, n_obs, dones, logprobs = self.shuffle(obs, acts, rewards, n_obs, dones, logprobs)
             enc_obs = self.encoder.get_encoding(obs)
             enc_n_obs = self.encoder.get_encoding(n_obs)
 
@@ -99,6 +99,11 @@ class Agent(object):
                 self.logger.log('density', ['loss'], [rnd_loss])
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
                 self.logger.log('encoder', ['loss'], [enc_loss])
+
+    def enc_shuffle(self, o, a):
+        indxs = np.arange(o.shape[0])
+        np.random.shuffle(indxs)
+        return o[indxs], a[indxs]
 
     def shuffle(self, o, a, r, n, d, l):
         indxs = np.arange(o.shape[0])

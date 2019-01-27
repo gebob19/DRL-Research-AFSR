@@ -20,11 +20,11 @@ if __name__ == '__main__':
     num_samples = 300
     batch_size = 32
 
-    test_run = False
+    test_run = True
     
-    train = False
-    restore = True
-    save = True
+    train = True
+    restore = False
+    save = False
 
     if test_run:
         num_samples = 10

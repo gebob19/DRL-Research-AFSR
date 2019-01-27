@@ -204,7 +204,6 @@ class Logger(object):
                 'rewards': []
             }
         }
-        self.fset = Path('.')
         
     def log(self, tag, subtags, data):
         for subtag, d in zip(subtags, data):
@@ -222,7 +221,7 @@ class Logger(object):
             pickle.dump(self.logs, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def import_logs(self, fname):
-        with open(self.fset/fname, 'rb') as f:
+        with open(fname, 'rb') as f:
             self.logs = pickle.load(f)
     
     def flush(self):

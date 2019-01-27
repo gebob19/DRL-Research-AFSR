@@ -7,8 +7,8 @@ def get_args(env, test_run=False):
         'n_hidden': 5,
         'hid_size': 64,
         'learning_rate': 5e-3,
-        'num_target_updates': 5,
-        'num_grad_steps_per_target_update': 5
+        'num_target_updates': 10,
+        'num_grad_steps_per_target_update': 10
     }
 
     adv_args = {
@@ -26,8 +26,8 @@ def get_args(env, test_run=False):
 
     target_N = {
         'fsize': 64,
-        'conv_depth': 2,
-        'n_layers': 2
+        'conv_depth': 4,
+        'n_layers': 8
     }
     pred_N = {
         'fsize': 64,
@@ -45,9 +45,9 @@ def get_args(env, test_run=False):
     # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
         'rnd_train_itr': 2,
-        'encoder_train_itr': 30,
+        'encoder_train_itr': 5,
         'num_actions_taken_conseq': 10,
-        'num_random_samples': 50,
+        'num_random_samples': 20,
         'p_rand': 0.6,                  # p(random action during rollout)
         'algorithm_rollout_rate': 2,
         'log_rate': 5,

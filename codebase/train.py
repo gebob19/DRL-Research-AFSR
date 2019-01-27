@@ -17,8 +17,8 @@ from args import get_args
 if __name__ == '__main__':
     env = gym.make('MontezumaRevenge-v0')
     policy_graph_args, adv_args, encoder_args, rnd_args, agent_args = get_args(env, test_run=True)
-    replay_buffer = MasterBuffer(max_size=30)
-    logger = Logger(max_size=5000)
+    replay_buffer = MasterBuffer(max_size=3000)
+    logger = Logger(max_size=100000)
 
     encoder = Encoder(encoder_args)
     obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
@@ -31,10 +31,10 @@ if __name__ == '__main__':
     # dynamics = DynamicsModel(dynamics_graph_args, dynamics_rollout_args)
     # training parameters
     exploitations_to_test = [np.random.randint(50, 100)]
-    n_iter = 2
-    num_samples = 10
-    batch_size = 5
-    train = True
+    n_iter = 100
+    num_samples = 200
+    batch_size = 64
+    train = False
     restore = False
     save = False
     
@@ -63,7 +63,6 @@ if __name__ == '__main__':
                     logger.export()
                     saver.save(sess, './model_data/model.ckpt')
         else: # view
-            # saver.restore(sess, "./model_data/model-first.ckpt")
             obs = env.reset()
             while True:
                 env.render()
@@ -72,7 +71,7 @@ if __name__ == '__main__':
                 except (ValueError, TypeError):
                     act = 20
                 if act not in range(17):
-                    enc_ob = encoder.multi_t_resize([obs])
+                    enc_ob = encoder.get_encoding([obs])
                     act = policy.get_best_action(enc_ob)
                 obs, rew, done, _ = env.step(act)
                 if done: break

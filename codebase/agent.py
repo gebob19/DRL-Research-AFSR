@@ -49,16 +49,16 @@ class Agent(object):
 
         self.replay_buffer.set_logprobs(logprobs)
         self.replay_buffer.merge_temp()
-        return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
+        return self.replay_buffer.get_all(batch_size, shuffle=False)
         
     def get_data(self, batch_size, num_samples, itr):
         if itr < self.num_random_samples:
-            return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
+            return self.sample_env(batch_size, num_samples, shuffle=False, action_selection='random')
         
         if itr % self.algorithm_rollout_rate == 0:
-            return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='algorithm')
+            return self.sample_env(batch_size, num_samples, shuffle=False, action_selection='algorithm')
         else:
-            return self.replay_buffer.get_all(batch_size, master=True, shuffle=True, size=num_samples)
+            return self.replay_buffer.get_all(batch_size, master=True, shuffle=False, size=num_samples)
     
     def train(self, batch_size, num_samples, itr):
         obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.get_data(batch_size, num_samples, itr)
@@ -69,6 +69,7 @@ class Agent(object):
             for _ in range(self.encoder_train_itr):
                 enc_loss = self.encoder.train(obs, acts)
 
+            # TODO shuffle batch here
             enc_obs = self.encoder.get_encoding(obs)
             enc_n_obs = self.encoder.get_encoding(n_obs)
 

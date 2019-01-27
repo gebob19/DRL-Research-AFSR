@@ -84,7 +84,9 @@ class RND(object):
         fsize = args['fsize']
         conv_depth = args['conv_depth']
         n_layers = args['n_layers']
-        network_output = Network(ph, self.out_size, scope, fsize, conv_depth, n_layers)
+        
+        # TODO make the weights more random => loss is starting at 0.08 ffs
+        network_output = Network(ph, self.out_size, scope, fsize, conv_depth, n_layers, n_strides=2)
         return network_output
 
     def set_sess(self, sess):

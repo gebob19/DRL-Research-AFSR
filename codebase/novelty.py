@@ -18,6 +18,7 @@ class Encoder(object):
         assert self.n_layers_frozen < self.act_layer_extract, 'Cannot freeze before action extraction'
 
         # action neural network params
+        self.setup_action_classes()
         actnn_layers = graph_args['actnn_layers']
         actnn_units = graph_args['actnn_units']
         # encoding pass
@@ -40,6 +41,28 @@ class Encoder(object):
         self.loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.actnn_pred, labels=action_enc)
         self.train_step = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
+    def setup_action_classes(self):
+        self.classes =  {
+            '4': 0,  # look left action group = 0
+            '7': 0,
+            '9': 0,
+            '12': 0,
+            '15': 0,
+            '17': 0,
+            '3': 1,   # look right action group = 1
+            '6': 1,
+            '8': 1,
+            '11': 1,
+            '14': 1,
+            '16': 1,
+            '1': 2,    #  jump up action group = 2
+            '10': 2,
+            '2': 3,     # up / down action group = 3
+            '5': 3,
+            '13': 3,
+            '0': 4,     #  do nothing action  group = 4
+        }
+
     def freeze(self, x):
         for layer in x.layers[:self.n_layers_frozen]:
             layer.trainable = False
@@ -53,13 +76,22 @@ class Encoder(object):
             self.obs_ph: resized_obs 
         })
     
-    def train(self, obs_n, n_obs_n, act):
+    def train(self, obs_n, n_obs_n, act_n):
+        # encode into action classes
+        enc_act_n = self.encode_actions(act_n) 
+        # update
         loss, _ = self.sess.run([self.loss, self.train_step], feed_dict={
-            self.prev_act_ph: act,
+            self.prev_act_ph: enc_act_n,
             self.actnn_prev_obs_ph: obs_n,
             self.actnn_obs_ph: n_obs_n
         })
         return loss
+    
+    def to_class(self, act):
+        return self.classes[str(act)]
+
+    def encode_actions(self, act_n):
+        return np.array(list(map(self.to_class, act_n)))
     
     def multi_t_resize(self, obs_n):
         with ThreadPoolExecutor(8) as e: pre_resized_obs = [e.submit(resize, obs) for obs in obs_n]

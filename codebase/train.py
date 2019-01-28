@@ -24,7 +24,7 @@ if __name__ == '__main__':
     restore = False
     save = True
     
-    test_run = False
+    test_run = True
 
     if test_run:
         num_samples = 10

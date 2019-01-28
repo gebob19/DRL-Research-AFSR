@@ -19,7 +19,7 @@ def get_args(env, test_run=False):
     }
 
     encoder_args = {
-        'act_dim': env.action_space.n,
+        'act_dim': 5, # number of action classes
         'n_layers_frozen': 5,
         'act_layer_extract': 20,
         'learning_rate': 1e-3,

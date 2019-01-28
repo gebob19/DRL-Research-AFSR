@@ -16,8 +16,8 @@ from args import get_args
 
 if __name__ == '__main__':
     env = gym.make('MontezumaRevenge-v0')
-    n_iter = 500
-    num_samples = 300
+    n_iter = 1000
+    num_samples = 200
     batch_size = 64
     
     train = True
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     save = True
     
     test_run = False
-    view = True
+    view = False
 
     if view:
         train = False
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         restore = False
 
     policy_graph_args, adv_args, encoder_args, rnd_args, agent_args = get_args(env, test_run=test_run)
-    replay_buffer = MasterBuffer(max_size=3000)
+    replay_buffer = MasterBuffer(max_size=5000)
     logger = Logger(max_size=100000)
 
     encoder = Encoder(encoder_args)

@@ -20,23 +20,23 @@ def get_args(env, test_run=False):
 
     encoder_args = {
         'act_dim': 5, # number of action classes
-        'n_layers_frozen': 5,
+        'n_layers_frozen': 10,
         'act_layer_extract': 20,
-        'learning_rate': 1e-3,
+        'learning_rate': 1e-4,
         'actnn_layers': 2,
         'actnn_units': 128
     }
 
     target_N = {
         'fsize': 32,
-        'conv_depth': 5,
-        'n_layers': 1,
+        'conv_depth': 4,
+        'n_layers': 4,
         'kernel_init': tf.initializers.variance_scaling(scale=20)
     }
     pred_N = {
-        'fsize': 64,
-        'conv_depth': 3,
-        'n_layers': 3,
+        'fsize': 32,
+        'conv_depth': 4,
+        'n_layers': 4,
         'kernel_init': tf.initializers.variance_scaling()
     }
     rnd_args = {
@@ -50,7 +50,7 @@ def get_args(env, test_run=False):
     # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
         'rnd_train_itr': 1,
-        'encoder_train_itr': 5,
+        'encoder_train_itr': 1,
         'num_conseq_rand_act': 10,
         'num_random_samples': 10,
         'p_rand': 0.5,                  # p(random action during rollout)

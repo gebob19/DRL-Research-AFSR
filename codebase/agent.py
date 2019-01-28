@@ -34,7 +34,7 @@ class Agent(object):
         done, i = False, 0
         takingRandom = False
         num_rand = 0
-        while i < num_samples and (not done or i > (100 + num_samples)):
+        while i < num_samples and (not done or i < (100 + num_samples)):
             if num_rand == self.num_conseq_rand_act: takingRandom = False
             # inject random samples into samples
             if action_selection == 'random' or np.random.uniform() <= self.p_rand_act or takingRandom:
@@ -75,7 +75,6 @@ class Agent(object):
     def train(self, batch_size, num_samples, itr):
         obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.get_data(batch_size, num_samples, itr)
         self.replay_buffer.flush_temp()
-
         # process all data in batches 
         for obs, acts, rewards, n_obs, dones, logprobs in zip(obsList, actsList, rewardsList, n_obsList, donesList, logprobsList):
             enc_obs = self.encoder.get_encoding(obs)
@@ -92,7 +91,7 @@ class Agent(object):
             adv = self.policy.estimate_adv(enc_obs, total_rewards, enc_n_obs, dones)
             actor_loss = self.policy.train_actor(enc_obs, acts, logprobs, adv)
            
-            if itr % self.log_rate:
+            if itr % self.log_rate == 0:
                 self.logger.log('density', ['loss'], [rnd_loss])
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
                 self.logger.log('encoder', ['loss'], [enc_loss])

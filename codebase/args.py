@@ -44,6 +44,8 @@ def get_args(env, test_run=False):
         # paper used 512
         'out_size': 512,
         'bonus_multiplier': 1,
+        'bonus_mean': 0,
+        'bonus_var': 1,
         'target_args': target_N,
         'pred_args': pred_N
     }

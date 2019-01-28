@@ -105,8 +105,10 @@ class RND(object):
     def __init__(self, in_shape, graph_args):
         target_args, pred_args = graph_args['target_args'], graph_args['pred_args']
         self.learning_rate = graph_args['learning_rate']
-        self.bonus_multi = graph_args['bonus_multiplier']
         self.out_size = graph_args['out_size']
+        self.bonus_mean = graph_args['bonus_mean']
+        self.bonus_var = graph_args['bonus_var']
+        self.bonus_multi = graph_args['bonus_multiplier']
 
         self.enc_obs = tf.placeholder(shape=in_shape, dtype=tf.float32)
 
@@ -137,7 +139,10 @@ class RND(object):
 
     def modify_rewards(self, enc_obs_n, rewards):
         extr_rewards = self.get_rewards(enc_obs_n)
-        return rewards + self.bonus_multi * extr_rewards
+        norm_extr_rew = (extr_rewards - np.mean(extr_rewards)) / (np.var(extr_rewards) + 1e-6)
+        norm_extr_rew = self.bonus_mean + norm_extr_rew * self.bonus_var
+        
+        return rewards + self.bonus_multi * norm_extr_rew
     
     def train(self, enc_obs_n):
         loss, _ = self.sess.run([self.loss, self.update_op], feed_dict={

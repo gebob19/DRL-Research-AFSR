@@ -16,16 +16,21 @@ from args import get_args
 
 if __name__ == '__main__':
     env = gym.make('MontezumaRevenge-v0')
-    n_iter = 100
-    num_samples = 100
-    batch_size = 32
+    n_iter = 500
+    num_samples = 300
+    batch_size = 64
     
     train = True
     restore = False
     save = True
     
     test_run = False
+    view = True
 
+    if view:
+        train = False
+        restore = True
+        save = False
     if test_run:
         num_samples = 10
         n_iter = 5

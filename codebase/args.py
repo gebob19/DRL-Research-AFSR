@@ -55,7 +55,7 @@ def get_args(env, test_run=False):
         'num_random_samples': 10,
         'p_rand': 0.5,                  # p(random action during rollout)
         'algorithm_rollout_rate': 1,
-        'log_rate': 5,
+        'log_rate': 1,
     }
 
     if test_run:

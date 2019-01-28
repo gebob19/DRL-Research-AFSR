@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np 
 import copy
-import time
+import datetime
 import pickle
 from random import shuffle
 from pathlib import Path
@@ -223,7 +223,7 @@ class Logger(object):
             self.size = 0
 
     def export(self):
-        fname = '{}.pkl'.format(time.time())
+        fname = '{}.pkl'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         with open(fname, 'wb') as f:
             pickle.dump(self.logs, f, protocol=pickle.HIGHEST_PROTOCOL)
 

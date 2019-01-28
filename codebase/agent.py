@@ -46,8 +46,8 @@ class Agent(object):
                 enc_ob = self.encoder.get_encoding([obs])
                 act = self.policy.get_best_action(enc_ob)
             n_ob, rew, done, _ = self.env.step(act)
-            self.replay_buffer.record(obs, act, rew, n_ob, done)
             if not done:
+                self.replay_buffer.record(obs, act, rew, n_ob, done) # temp solution for enc req.
                 obs = n_ob
             else:
                 obs = self.env.reset()
@@ -61,31 +61,28 @@ class Agent(object):
 
         self.replay_buffer.set_logprobs(logprobs)
         self.replay_buffer.merge_temp()
-        return self.replay_buffer.get_all(batch_size, shuffle=False)
+        return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
         
     def get_data(self, batch_size, num_samples, itr):
         if itr < self.num_random_samples:
-            return self.sample_env(batch_size, num_samples, shuffle=False, action_selection='random')
+            return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
         
         if itr % self.algorithm_rollout_rate == 0:
-            return self.sample_env(batch_size, num_samples, shuffle=False, action_selection='algorithm')
+            return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='algorithm')
         else:
-            return self.replay_buffer.get_all(batch_size, master=True, shuffle=False, size=num_samples)
+            return self.replay_buffer.get_all(batch_size, master=True, shuffle=True, size=num_samples)
     
     def train(self, batch_size, num_samples, itr):
         obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.get_data(batch_size, num_samples, itr)
         self.replay_buffer.flush_temp()
-        obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.shuffle(obsList, actsList, rewardsList, n_obsList, donesList, logprobsList)
+
         # process all data in batches 
         for obs, acts, rewards, n_obs, dones, logprobs in zip(obsList, actsList, rewardsList, n_obsList, donesList, logprobsList):
-            
-            for _ in range(self.encoder_train_itr):
-                eobs_n, eprev_act_n = self.enc_shuffle(obs[1:], acts[:-1])
-                enc_loss = self.encoder.train(eobs_n, eprev_act_n)
-
-            obs, acts, rewards, n_obs, dones, logprobs = self.shuffle(obs, acts, rewards, n_obs, dones, logprobs)
             enc_obs = self.encoder.get_encoding(obs)
             enc_n_obs = self.encoder.get_encoding(n_obs)
+
+            for _ in range(self.encoder_train_itr):
+                enc_loss = self.encoder.train(enc_obs, enc_n_obs, acts)
 
             for _ in range(self.rnd_train_itr):
                 rnd_loss = self.rnd.train(enc_obs)

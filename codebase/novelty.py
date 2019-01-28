@@ -20,15 +20,21 @@ class Encoder(object):
         # action neural network params
         actnn_layers = graph_args['actnn_layers']
         actnn_units = graph_args['actnn_units']
-
-        self.obs_ph = tf.placeholder(shape=(None, 224, 224, 3), dtype=tf.float32) # obs_i
-        self.prev_act_ph = tf.placeholder(shape=(None,), dtype=tf.int32)  # act_i-1
-
+        # encoding pass
+        self.obs_ph = tf.placeholder(shape=(None, 224, 224, 3), dtype=tf.float32) 
         nn = ResNet50(include_top=False, weights='imagenet', input_tensor=self.obs_ph)
         self.freeze(nn)
-                
         self.obs_encoded = nn.layers[self.act_layer_extract].output
-        self.actnn_pred = dense_pass(self.obs_encoded, self.act_dim, actnn_layers, actnn_units)
+
+        # start of action neural net
+        obs_enc_shape = self.obs_encoded.get_shape().as_list()
+        # act_i-1, obs_i-1, obs_i placeholders
+        self.prev_act_ph = tf.placeholder(shape=(None,), dtype=tf.int32) 
+        self.actnn_prev_obs_ph = tf.placeholder(shape=obs_enc_shape, dtype=tf.float32)
+        self.actnn_obs_ph = tf.placeholder(shape=obs_enc_shape, dtype=tf.float32)
+        # concat & network pass
+        multi_obs_enc = tf.concat([self.actnn_prev_obs_ph, self.actnn_obs_ph], axis=-1)
+        self.actnn_pred = dense_pass(multi_obs_enc, self.act_dim, actnn_layers, actnn_units)
         
         action_enc = tf.one_hot(self.prev_act_ph, depth=self.act_dim)
         self.loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.actnn_pred, labels=action_enc)
@@ -47,11 +53,11 @@ class Encoder(object):
             self.obs_ph: resized_obs 
         })
     
-    def train(self, obs_n, prev_act_n):
-        resized_obs = self.multi_t_resize(obs_n)
+    def train(self, obs_n, n_obs_n, act):
         loss, _ = self.sess.run([self.loss, self.train_step], feed_dict={
-            self.obs_ph: resized_obs,
-            self.prev_act_ph: prev_act_n
+            self.prev_act_ph: act,
+            self.actnn_prev_obs_ph: obs_n,
+            self.actnn_obs_ph: n_obs_n
         })
         return loss
     

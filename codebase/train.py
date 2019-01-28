@@ -19,12 +19,12 @@ if __name__ == '__main__':
     n_iter = 100
     num_samples = 100
     batch_size = 32
-
-    test_run = False
     
-    train = False
-    restore = True
+    train = True
+    restore = False
     save = True
+    
+    test_run = False
 
     if test_run:
         num_samples = 10
@@ -39,15 +39,12 @@ if __name__ == '__main__':
 
     encoder = Encoder(encoder_args)
     obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
-
     policy = PPO(policy_graph_args, adv_args, obs_encoded_shape)
     rnd = RND(obs_encoded_shape, rnd_args)
 
     agent = Agent(env, policy, encoder, rnd, replay_buffer, logger, agent_args)
 
-    # dynamics = DynamicsModel(dynamics_graph_args, dynamics_rollout_args)
     # training parameters
-    
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
     tf_config.gpu_options.allow_growth = True
     saver = tf.train.Saver()
@@ -61,7 +58,7 @@ if __name__ == '__main__':
 
         if train:
             try:
-                print('Starting traininng...')
+                print('Starting training...')
                 for itr in range(n_iter):
                     start = time.time()
                     agent.train(batch_size, num_samples, itr)

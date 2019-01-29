@@ -36,7 +36,7 @@ class Agent(object):
         n_lives = 6
         num_rand = 0
         ignore = 0
-        while i < num_samples and (not done or i < (100 + num_samples)):
+        while i < num_samples or (not done and i < (100 + num_samples)):
             if num_rand == self.num_conseq_rand_act: takingRandom = False
             # inject random samples into samples
             if action_selection == 'random' or np.random.uniform() <= self.p_rand_act or takingRandom:
@@ -97,9 +97,7 @@ class Agent(object):
             for _ in range(self.rnd_train_itr):
                 rnd_loss = self.rnd.train(enc_obs)
 
-            print(rewards)
             total_rewards = self.rnd.modify_rewards(enc_obs, rewards)
-            print(total_rewards)
             critic_loss = self.policy.train_critic(enc_obs, enc_n_obs, total_rewards, dones)
             adv = self.policy.estimate_adv(enc_obs, total_rewards, enc_n_obs, dones)
             actor_loss = self.policy.train_actor(enc_obs, acts, logprobs, adv)

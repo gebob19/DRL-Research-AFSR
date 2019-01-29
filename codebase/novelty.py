@@ -107,8 +107,8 @@ class RND(object):
         self.learning_rate = graph_args['learning_rate']
         self.out_size = graph_args['out_size']
         self.proportion_to_update = graph_args['proportion_to_update']
-        # self.bonus_mean = graph_args['bonus_mean']
-        # self.bonus_var = graph_args['bonus_var']
+        self.bonus_mean = graph_args['bonus_mean']
+        self.bonus_var = graph_args['bonus_var']
         self.bonus_multi = graph_args['bonus_multiplier']
 
         self.enc_obs = tf.placeholder(shape=in_shape, dtype=tf.float32)

@@ -17,15 +17,15 @@ from args import get_args
 if __name__ == '__main__':
     env = gym.make('MontezumaRevenge-v0')
     n_iter = 1000
-    num_samples = 200
+    num_samples = 400
     batch_size = 64
     
-    train = True
-    restore = False
-    save = True
+    train = 1
+    restore = 0
+    save = 1
     
-    test_run = True
-    view = False
+    test_run = 0
+    view = 0
 
     if view:
         train = False
@@ -70,11 +70,28 @@ if __name__ == '__main__':
                     end = time.time()
                     print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
                     print('size of logger:{}, size of buf:{}'.format(logger.size, len(replay_buffer.master_replay)))
+                    if itr % 50 == 0 and itr != 0:
+                        obs = env.reset()
+                        i = 0
+                        while i < 200:
+                            env.render()
+                            try:
+                                act = int(input('Press a key to continue...'))
+                            except (ValueError, TypeError):
+                                act = 20
+                            if act not in range(17):
+                                enc_ob = encoder.get_encoding([obs])
+                                act = policy.get_best_action(enc_ob)
+                            obs, rew, done, _ = env.step(act)
+                            if done: break
+                            i+=1
+
             finally: # safe exit sooner
                 if save:
                     logger.export()
                     saver.save(sess, './model_data/model.ckpt')
-        else: # view
+        
+        if view: # view
             obs = env.reset()
             while True:
                 env.render()

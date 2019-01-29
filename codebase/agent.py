@@ -39,14 +39,14 @@ class Agent(object):
         while i < num_samples or (not done and i < (100 + num_samples)):
             if num_rand == self.num_conseq_rand_act: takingRandom = False
             # inject random samples into samples
-            if action_selection == 'random' or np.random.uniform() <= self.p_rand_act or takingRandom:
+            if action_selection == 'random': #or np.random.uniform() <= self.p_rand_act or takingRandom:
                 act = self.env.action_space.sample()
-                if not takingRandom: 
-                    takingRandom = True
-                    num_rand = 1
+                # if not takingRandom: 
+                #     takingRandom = True
+                #     num_rand = 1
             else:  # action_selection == algorithm 
                 enc_ob = self.encoder.get_encoding([obs])
-                act = self.policy.get_best_action(enc_ob)
+                act = self.policy.sample(enc_ob)
             n_ob, rew, done, info = self.env.step(act)
 
             # dont record when agent dies

@@ -10,8 +10,8 @@ def get_args(env, test_run=False):
         'n_hidden': 5,
         'hid_size': 64,
         'learning_rate': 5e-3,
-        'num_target_updates': 1,
-        'num_grad_steps_per_target_update': 2
+        'num_target_updates': 5,
+        'num_grad_steps_per_target_update': 3
     }
 
     adv_args = {
@@ -21,9 +21,9 @@ def get_args(env, test_run=False):
     encoder_args = {
         'act_dim': 5, # number of action classes
         'n_layers_frozen': 10,
-        'act_layer_extract': 20,
-        'learning_rate': 1e-4,
-        'actnn_layers': 2,
+        'act_layer_extract': 30,
+        'learning_rate': 1e-6,
+        'actnn_layers': 4,
         'actnn_units': 128
     }
 
@@ -31,33 +31,32 @@ def get_args(env, test_run=False):
         'fsize': 32,
         'conv_depth': 4,
         'n_layers': 4,
-        'kernel_init': None
-        # 'kernel_init': tf.initializers.variance_scaling(scale=np.)
+        'kernel_init': tf.initializers.variance_scaling()
     }
     pred_N = {
         'fsize': 32,
         'conv_depth': 4,
         'n_layers': 4,
-        'kernel_init': None
+        'kernel_init': tf.initializers.variance_scaling()
     }
     rnd_args = {
-        'learning_rate': 1e-2,
+        'learning_rate': 1e-3,
         'out_size': 512,
         'bonus_multiplier': 1,
-        'proportion_to_update': 1,
-        # 'bonus_mean': 0,
-        # 'bonus_var': 1,
+        'proportion_to_update': .9,
+        'bonus_mean': 0,
+        'bonus_var': 1,
         'target_args': target_N,
         'pred_args': pred_N
     }
     # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
         'rnd_train_itr': 1,
-        'encoder_train_itr': 1,
+        'encoder_train_itr': 2,
         'num_conseq_rand_act': 10,
-        'num_random_samples': 10,
+        'num_random_samples': 5,
         'p_rand': 0.5,                  # p(random action during rollout)
-        'algorithm_rollout_rate': 1,
+        'algorithm_rollout_rate': 2,
         'log_rate': 1,
     }
 

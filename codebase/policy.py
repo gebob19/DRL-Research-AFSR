@@ -23,10 +23,11 @@ class PPO(object):
         # policy / actor evaluation with encoded state
         self.policy_distrib = Network(self.obs_enc, self.act_dim, 'policy', hid_size, n_hidden_dense=n_hidden)
         self.greedy_action = tf.argmax(self.policy_distrib, axis=1)
+
         # U = tf.random_uniform(tf.shape(self.policy_distrib), minval = 0, maxval = 1)
-        # self.sample = tf.argmax(self.policy_distrib - tf.log(-tf.log(U)), axis=1)
+        # self.sample_action = tf.argmax(self.policy_distrib - tf.log(-tf.log(U)), axis=1)
         self.n_act_sample = 1
-        self.sample_action = tf.random.multinomial(self.policy_distrib, self.n_act_sample)
+        self.sample_action = tf.random.multinomial(tf.nn.softmax(self.policy_distrib), self.n_act_sample)
 
         action_enc = tf.one_hot(self.act, depth=self.act_dim)
         self.logprob = -1 * tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy_distrib, labels=action_enc)
@@ -60,7 +61,7 @@ class PPO(object):
         self.n_act_sample = len(enc_obs)
         return self.sess.run(self.sample_action, feed_dict={
             self.obs_enc: enc_obs
-        })[0]
+        })[0][0]
         
     def get_best_action(self, enc_obs):
         # obs must be shape (1, ob_dim)

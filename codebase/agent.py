@@ -33,7 +33,9 @@ class Agent(object):
         obs = self.env.reset()
         done, i = False, 0
         takingRandom = False
+        n_lives = 6
         num_rand = 0
+        ignore = 0
         while i < num_samples and (not done or i < (100 + num_samples)):
             if num_rand == self.num_conseq_rand_act: takingRandom = False
             # inject random samples into samples
@@ -45,14 +47,23 @@ class Agent(object):
             else:  # action_selection == algorithm 
                 enc_ob = self.encoder.get_encoding([obs])
                 act = self.policy.get_best_action(enc_ob)
-            n_ob, rew, done, _ = self.env.step(act)
+            n_ob, rew, done, info = self.env.step(act)
+
+            # dont record when agent dies
+            if info['ale.lives'] != n_lives:
+                ignore = 18
+                n_lives -= 1
             if not done:
-                self.replay_buffer.record(obs, act, rew, n_ob, done) # temp solution for enc req.
-                obs = n_ob
+                if ignore > 0:
+                    ignore -= 1
+                else:
+                    self.replay_buffer.record(obs, act, rew, n_ob, done) # temp solution for enc req.
+                    obs = n_ob
+                    i += 1
             else:
                 obs = self.env.reset()
                 done = True
-            i += 1
+                i += 1
         
         # sync logger work
         obs_n, act_n, _ = self.replay_buffer.get_obs_act_nobs()

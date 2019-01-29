@@ -86,7 +86,9 @@ class Agent(object):
             for _ in range(self.rnd_train_itr):
                 rnd_loss = self.rnd.train(enc_obs)
 
+            print(rewards)
             total_rewards = self.rnd.modify_rewards(enc_obs, rewards)
+            print(total_rewards)
             critic_loss = self.policy.train_critic(enc_obs, enc_n_obs, total_rewards, dones)
             adv = self.policy.estimate_adv(enc_obs, total_rewards, enc_n_obs, dones)
             actor_loss = self.policy.train_actor(enc_obs, acts, logprobs, adv)

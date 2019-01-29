@@ -106,8 +106,9 @@ class RND(object):
         target_args, pred_args = graph_args['target_args'], graph_args['pred_args']
         self.learning_rate = graph_args['learning_rate']
         self.out_size = graph_args['out_size']
-        self.bonus_mean = graph_args['bonus_mean']
-        self.bonus_var = graph_args['bonus_var']
+        self.proportion_to_update = graph_args['proportion_to_update']
+        # self.bonus_mean = graph_args['bonus_mean']
+        # self.bonus_var = graph_args['bonus_var']
         self.bonus_multi = graph_args['bonus_multiplier']
 
         self.enc_obs = tf.placeholder(shape=in_shape, dtype=tf.float32)
@@ -115,9 +116,14 @@ class RND(object):
         # f(o*) and f*(o*)
         self.target_output = self.set_network(self.enc_obs, target_args, 'rnd_targetN')
         self.pred_output = self.set_network(self.enc_obs, pred_args, 'rnd_predictorN')
-        # print(self.target_output, self.pred_output)
-        self.loss = tf.losses.mean_squared_error(self.target_output, self.pred_output)
-        self.update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+        
+        self.int_rew = tf.reduce_mean(tf.square(tf.stop_gradient(self.target_output) - self.pred_output), axis=-1)
+
+        self.aux_loss = tf.reduce_mean(tf.square(tf.stop_gradient(self.target_output) - self.pred_output), -1)
+        mask = tf.random_uniform(shape=tf.shape(self.aux_loss), minval=0., maxval=1., dtype=tf.float32)
+        mask = tf.cast(mask < self.proportion_to_update, tf.float32)
+        self.aux_loss = tf.reduce_sum(mask * self.aux_loss) / tf.maximum(tf.reduce_sum(mask), 1.)
+        self.update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.aux_loss)
 
     def set_network(self, ph, args, scope):
         fsize = args['fsize']
@@ -133,19 +139,18 @@ class RND(object):
         self.sess = sess
 
     def get_rewards(self, enc_obs_n):
-        return self.sess.run(self.loss, feed_dict={
+        return self.sess.run(self.int_rew, feed_dict={
             self.enc_obs: enc_obs_n,
         })
 
     def modify_rewards(self, enc_obs_n, rewards):
         extr_rewards = self.get_rewards(enc_obs_n)
-        norm_extr_rew = (extr_rewards - np.mean(extr_rewards)) / (np.var(extr_rewards) + 1e-6)
-        norm_extr_rew = self.bonus_mean + norm_extr_rew * self.bonus_var
-        
-        return rewards + self.bonus_multi * norm_extr_rew
+        # norm_extr_rew = (extr_rewards - np.mean(extr_rewards)) / (np.var(extr_rewards) + 1e-6)
+        # norm_extr_rew = self.bonus_mean + norm_extr_rew * self.bonus_var
+        return rewards + self.bonus_multi * extr_rewards
     
     def train(self, enc_obs_n):
-        loss, _ = self.sess.run([self.loss, self.update_op], feed_dict={
+        loss, _ = self.sess.run([self.aux_loss, self.update_op], feed_dict={
             self.enc_obs: enc_obs_n,
         })
         return loss  

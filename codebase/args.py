@@ -31,21 +31,22 @@ def get_args(env, test_run=False):
         'fsize': 32,
         'conv_depth': 4,
         'n_layers': 4,
-        'kernel_init': tf.initializers.variance_scaling(scale=20)
+        'kernel_init': None
+        # 'kernel_init': tf.initializers.variance_scaling(scale=np.)
     }
     pred_N = {
         'fsize': 32,
         'conv_depth': 4,
         'n_layers': 4,
-        'kernel_init': tf.initializers.variance_scaling()
+        'kernel_init': None
     }
     rnd_args = {
         'learning_rate': 1e-2,
-        # paper used 512
         'out_size': 512,
         'bonus_multiplier': 1,
-        'bonus_mean': 0,
-        'bonus_var': 1,
+        'proportion_to_update': 1,
+        # 'bonus_mean': 0,
+        # 'bonus_var': 1,
         'target_args': target_N,
         'pred_args': pred_N
     }

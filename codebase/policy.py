@@ -6,7 +6,7 @@ class PPO(object):
     def __init__(self, graph_args, adv_args, in_shape):
         self.ob_dim = graph_args['ob_dim']
         self.act_dim = graph_args['act_dim']
-        clip_range = graph_args['clip_range']
+        # clip_range = graph_args['clip_range']
         # conv operations params
         n_hidden = graph_args['n_hidden']
         hid_size = graph_args['hid_size']
@@ -16,8 +16,8 @@ class PPO(object):
         self.num_grad_steps_per_target_update = graph_args['num_grad_steps_per_target_update']
         
         self.gamma = adv_args['gamma']
-        
-        self.act, self.adv, self.old_logprob = self.define_placeholders()
+
+        self.act, self.adv = self.define_placeholders()
         self.obs_enc = tf.placeholder(shape=in_shape, dtype=tf.float32)
         
         # policy / actor evaluation with encoded state
@@ -28,23 +28,17 @@ class PPO(object):
         # self.sample_action = tf.argmax(self.policy_distrib - tf.log(-tf.log(U)), axis=1)
         self.n_act_sample = 1
         self.sample_action = tf.random.multinomial(tf.nn.softmax(self.policy_distrib), self.n_act_sample)
-
+        
+        # policy update
         action_enc = tf.one_hot(self.act, depth=self.act_dim)
         self.logprob = -1 * tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy_distrib, labels=action_enc)
-        
-        # importance sampling
-        ratio = tf.exp(self.logprob - self.old_logprob)
-        clipped_ratio = tf.clip_by_value(ratio, 1.0-clip_range, 1.0+clip_range)        
-        # include increase entropy term with alpha=0.2
-        batch_loss = tf.minimum(ratio*self.adv, clipped_ratio * self.adv)# - 0.2 * self.logprob
-        self.actor_loss = -tf.reduce_mean(batch_loss)
+        self.actor_loss = -tf.reduce_mean(self.logprob * self.adv)
         self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.actor_loss)
         
         # critic definition with encoded state
-        self.v_pred = tf.squeeze(Network(self.obs_enc, 1, 'critic', hid_size, n_hidden_dense=n_hidden))
         self.v_target = tf.placeholder(shape=(None,), name='v_target', dtype=tf.float32)
+        self.v_pred = tf.squeeze(Network(self.obs_enc, 1, 'critic', hid_size, n_hidden_dense=n_hidden))
         self.critic_loss = tf.losses.mean_squared_error(self.v_target, self.v_pred)
-        # minimize with respect to correct variables HERE
         self.critic_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.critic_loss)
         
     def set_session(self, sess):
@@ -53,8 +47,7 @@ class PPO(object):
     def define_placeholders(self):
         act = tf.placeholder(shape=(None,), name='act', dtype=tf.int32)
         adv = tf.placeholder(shape=(None,), name='adv', dtype=tf.float32)
-        logprob = tf.placeholder(shape=(None,), name='logprob', dtype=tf.float32)
-        return act, adv, logprob
+        return act, adv
 
     def sample(self, enc_obs):
         # obs must be shape (1, ob_dim)
@@ -73,12 +66,6 @@ class PPO(object):
         return self.sess.run(self.policy_distrib, feed_dict={
             self.obs_enc: [obs]
         })[0]
-
-    def get_logprob(self, n_obs, n_act):
-        return self.sess.run(self.logprob, feed_dict={
-            self.obs_enc: n_obs,
-            self.act: n_act
-        })
     
     def estimate_adv(self, obs, rew, nxt_obs, dones):
         v_obs = self.sess.run(self.v_pred, feed_dict={self.obs_enc: obs})
@@ -89,12 +76,11 @@ class PPO(object):
         adv = (adv - np.mean(adv)) / (np.std(adv) + 1e-8)
         return adv
     
-    def train_actor(self, obs, act, logprob, adv):
+    def train_actor(self, obs, act, adv):
         loss, _ = self.sess.run([self.actor_loss, self.actor_update_op], feed_dict={
             self.obs_enc: obs,
             self.act: act,
-            self.adv: adv,
-            self.old_logprob: logprob
+            self.adv: adv
         })
         return loss
         

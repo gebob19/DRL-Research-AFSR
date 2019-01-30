@@ -28,40 +28,59 @@ class Agent(object):
         self.encoder.set_sess(sess)
         self.rnd.set_sess(sess)
         # self.dynamics.set_session(sess)
-        
-    def sample_env(self, batch_size, num_samples, shuffle, action_selection):
-        obs = self.env.reset()
-        obs, rew, n_obs, dones = [], [], [], []
-        done, i = False, 0
-        takingRandom = False
-        n_lives = 6
-        num_rand = 0
-        ignore = 0
-        while i < num_samples or (not done and i < (100 + num_samples)):
-            if num_rand == self.num_conseq_rand_act: takingRandom = False
-            # inject random samples into samples
-            if action_selection == 'random': 
-                act = self.env.action_space.sample()
-            else:  # action_selection == algorithm 
-                enc_ob = self.encoder.get_encoding([obs])
-                act = self.policy.sample(enc_ob)
 
-            n_ob, rew, done, info = self.env.step(act)
+    def batch(self, eo, a, er, ir, en, d, batch_size, shuffle=True):
+        if shuffle:
+            indxs = np.arange(len(eo))
+            np.random.shuffle(indxs)
+            eo, a, er, ir, en, d = np.array(eo)[indxs], \
+                np.array(a)[indxs], np.array(er)[indxs], np.array(ir)[indxs], \
+                np.array(en)[indxs], np.array(d)[indxs]
+        
+        # batch up data
+        batched_dsets = []
+        for dset in [eo, a, er, ir, en, d]:
+            bdset = []
+            for i in range(0, len(dset), batch_size):
+                 bdset.append(np.array(dset[i:i+batch_size]))
+            batched_dsets.append(np.array(bdset))
+        return tuple(batched_dsets)
+        
+    def sample_env(self, batch_size, num_samples, shuffle):
+        done, i = False, 0
+        n_lives, ignore = 6, 0
+        obs_n, act_n, ext_rew_n, n_obs_n, dones_n = [], [], [], [], []
+        
+        # policy rollout
+        obs = self.env.reset()
+        while i < num_samples or (not done and i < (100 + num_samples)):
+            enc_ob = self.encoder.get_encoding([obs])
+            act = self.policy.sample(enc_ob)
+            n_obs, rew, done, info = self.env.step(act)
+            
             # dont record when agent dies
             if info['ale.lives'] != n_lives:
-                ignore = 18
-                n_lives -= 1
-            if not done:
-                if ignore > 0:
-                    ignore -= 1
-                else:
-                    self.replay_buffer.record(obs, act, rew, n_ob, done) 
-                    obs = n_ob
-                    i += 1
+                ignore = 18; n_lives -= 1
+            if ignore > 0: ignore -= 1
             else:
-                obs = self.env.reset()
-                done = True
+                # running normalization
+                if i > 0:
+                    obs, n_obs = self.norm_clip(obs, obs_n), self.norm_clip(n_obs, n_obs_n)
+
+                obs_n.append(obs); ext_rew_n.append(rew); n_obs_n.append(n_obs)
+                act_n.append(act); dones_n.append(done)
+                if done:
+                    obs = self.env.reset()
+                    done = True
+                    n_lives, ignore = 6, 0
                 i += 1
+
+        enc_obs = self.encoder.get_encoding(obs_n)
+        enc_n_obs = self.encoder.get_encoding(n_obs_n)
+        int_rew = self.rnd.get_rewards(enc_obs)
+        ext_rew_n = np.clip(ext_rew_n, -1, 1)
+
+        return self.batch(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n, batch_size, shuffle)
         
         # sync logger work
         # obs_n, act_n, rew_n = self.replay_buffer.get_logger_work()
@@ -70,45 +89,35 @@ class Agent(object):
         # self.replay_buffer.set_logprobs(logprobs)
         # self.replay_buffer.merge_temp()
         # return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
+    
+    def norm_clip(self, ob, obs):
+        # normalize and clip before training
+        nrm_ob = (ob - np.mean(obs)) / np.var(obs)
+        return np.clip(nrm_ob, -5, 5)
         
     def get_data(self, batch_size, num_samples, itr):
         # if itr < self.num_random_samples:
         #     return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
         # if itr % self.algorithm_rollout_rate == 0:
-        return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='algorithm')
+        return self.sample_env(batch_size, num_samples, shuffle=True)
         # else:
         #     return self.replay_buffer.get_all(batch_size, master=True, shuffle=True, size=num_samples)
     
     def train(self, batch_size, num_samples, itr):
-        obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.get_data(batch_size, num_samples, itr)
-        self.replay_buffer.flush_temp()
-        # process all data in batches 
-        for obs, acts, rewards, n_obs, dones, logprobs in zip(obsList, actsList, rewardsList, n_obsList, donesList, logprobsList):
-            enc_obs = self.encoder.get_encoding(obs)
-            enc_n_obs = self.encoder.get_encoding(n_obs)
-
+        enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.get_data(batch_size, num_samples, itr)
+    
+        for b_eobs, b_acts, b_erew, b_irew, b_enobs, b_dones in zip(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n):
             for _ in range(self.encoder_train_itr):
-                enc_loss = self.encoder.train(enc_obs, enc_n_obs, acts)
+                enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
 
-            for _ in range(self.rnd_train_itr):
-                rnd_loss = self.rnd.train(enc_obs)
-
-            total_rewards = self.rnd.modify_rewards(enc_obs, rewards)
-            critic_loss = self.policy.train_critic(enc_obs, enc_n_obs, total_rewards, dones)
-            adv = self.policy.estimate_adv(enc_obs, total_rewards, enc_n_obs, dones)
-            actor_loss = self.policy.train_actor(enc_obs, acts, logprobs, adv)
+            rnd_loss = self.rnd.train(b_eobs)
+            # 1 critic temp 
+            total_r = b_erew + b_irew
+            critic_loss = self.policy.train_critic(b_eobs, b_enobs, total_r, b_dones)
+            adv = self.policy.estimate_adv(b_eobs, total_r, b_enobs, b_dones)
+            actor_loss = self.policy.train_actor(b_eobs, b_acts, adv)
            
             if itr % self.log_rate == 0:
                 self.logger.log('density', ['loss'], [rnd_loss])
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
                 self.logger.log('encoder', ['loss'], [enc_loss])
-
-    def enc_shuffle(self, o, a):
-        indxs = np.arange(o.shape[0])
-        np.random.shuffle(indxs)
-        return o[indxs], a[indxs]
-
-    def shuffle(self, o, a, r, n, d, l):
-        indxs = np.arange(o.shape[0])
-        np.random.shuffle(indxs)
-        return o[indxs], a[indxs], r[indxs], n[indxs], d[indxs], l[indxs]

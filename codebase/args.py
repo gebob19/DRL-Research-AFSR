@@ -5,7 +5,7 @@ def get_args(env, test_run=False):
     
     policy_graph_args = {
         'ob_dim': env.observation_space.shape,
-        'act_dim': env.action_space.n,
+        'act_dim': env.action_space.n - 1,
         'clip_range': 0.2,
         'n_hidden': 5,
         'hid_size': 64,
@@ -23,21 +23,21 @@ def get_args(env, test_run=False):
         'n_layers_frozen': 10,
         'act_layer_extract': 30,
         'learning_rate': 1e-6,
-        'actnn_layers': 4,
+        'actnn_layers': 2,
         'actnn_units': 128
     }
 
     target_N = {
         'fsize': 32,
         'conv_depth': 4,
-        'n_layers': 4,
-        'kernel_init': tf.initializers.variance_scaling()
+        'n_layers': 1,
+        'kernel_init': None
     }
     pred_N = {
         'fsize': 32,
         'conv_depth': 4,
-        'n_layers': 4,
-        'kernel_init': tf.initializers.variance_scaling()
+        'n_layers': 1,
+        'kernel_init': None
     }
     rnd_args = {
         'learning_rate': 1e-3,

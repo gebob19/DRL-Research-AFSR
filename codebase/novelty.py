@@ -73,7 +73,7 @@ class Encoder(object):
     def get_encoding(self, obs_n):
         resized_obs = self.multi_t_resize(obs_n)
         return self.sess.run(self.obs_encoded, feed_dict={
-            self.obs_ph: norm_clip(resized_obs)
+            self.obs_ph: resized_obs
         })
     
     def train(self, obs_n, n_obs_n, act_n):
@@ -82,8 +82,8 @@ class Encoder(object):
         # update
         loss, _ = self.sess.run([self.loss, self.train_step], feed_dict={
             self.prev_act_ph: enc_act_n,
-            self.actnn_prev_obs_ph: norm_clip(obs_n),
-            self.actnn_obs_ph: norm_clip(n_obs_n)
+            self.actnn_prev_obs_ph: obs_n,
+            self.actnn_obs_ph: n_obs_n,
         })
         return loss
     
@@ -138,9 +138,8 @@ class RND(object):
         self.sess = sess
 
     def get_rewards(self, enc_obs_n):
-        obs = norm_clip(enc_obs_n)
         return self.sess.run(self.int_rew, feed_dict={
-            self.enc_obs: obs,
+            self.enc_obs: enc_obs_n,
         })
 
     def modify_rewards(self, enc_obs_n, rewards):
@@ -150,9 +149,8 @@ class RND(object):
         return rewards + self.bonus_multi * extr_rewards
     
     def train(self, enc_obs_n):
-        obs = norm_clip(enc_obs_n)
         loss, _ = self.sess.run([self.aux_loss, self.update_op], feed_dict={
-            self.enc_obs: obs,
+            self.enc_obs: enc_obs_n,
         })
         return loss  
 
@@ -161,9 +159,3 @@ def dense_pass(x, out_size, num_layers, units, output_activation=None):
     for _ in range(num_layers):
         x = tf.layers.dense(x, units, activation=tf.tanh)
     return tf.layers.dense(x, out_size, activation=output_activation)
-
-def norm_clip(obs):
-    # normalize and clip before training
-    nrm_obs = obs - np.mean(obs) / np.var(obs)
-    np.clip(nrm_obs, -5, 5)
-    return nrm_obs

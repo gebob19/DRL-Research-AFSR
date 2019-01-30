@@ -7,7 +7,7 @@ import matplotlib
 import time
 import os
 
-from utils import Logger, MasterBuffer, Network
+from utils import Logger, MasterBuffer, Network, make_env
 from policy import PPO
 from novelty import Encoder, RND
 from dynamics import DynamicsModel
@@ -15,7 +15,7 @@ from agent import Agent
 from args import get_args 
 
 if __name__ == '__main__':
-    env = gym.make('MontezumaRevenge-v0')
+    env = make_env('MontezumaRevenge-v0', 84, 84)
     n_iter = 1000
     num_samples = 128
     batch_size = 32

@@ -1,5 +1,9 @@
 import tensorflow as tf
 import numpy as np 
+import gym
+from gym import spaces
+import cv2
+
 import copy
 import datetime
 import pickle
@@ -25,6 +29,25 @@ def Network(input_tensor, output_size, scope, fsize, conv_depth=0, n_hidden_dens
                 x = tf.layers.dense(x, fsize, activation=activation, kernel_initializer=kernel_init)
             y = tf.layers.dense(x, output_size, activation=output_activation, kernel_initializer=kernel_init)
         return y
+
+def make_env(env_id, width, height):
+    env = gym.make(env_id)
+    env = WarpFrame(env, width, height)
+    return env
+
+class WarpFrame(gym.ObservationWrapper):
+    def __init__(self, env, width, height):
+        """Warp frames to 84x84 as done in the Nature paper and later work."""
+        gym.ObservationWrapper.__init__(self, env)
+        self.width = width
+        self.height = height
+        self.observation_space = spaces.Box(low=0, high=255,
+            shape=(self.height, self.width, 1), dtype=np.uint8)
+
+    def observation(self, frame):
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
+        return frame[:, :, None]
 
 class ReplayBuffer(object):
     def __init__(self, max_size=10000):

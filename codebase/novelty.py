@@ -71,9 +71,9 @@ class Encoder(object):
         self.sess = sess
     
     def get_encoding(self, obs_n):
-        resized_obs = self.multi_t_resize(obs_n)
+        # resized_obs = self.multi_t_resize(obs_n)
         return self.sess.run(self.obs_encoded, feed_dict={
-            self.obs_ph: resized_obs
+            self.obs_ph: obs_n
         })
     
     def train(self, obs_n, n_obs_n, act_n):

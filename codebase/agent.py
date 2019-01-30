@@ -31,6 +31,7 @@ class Agent(object):
         
     def sample_env(self, batch_size, num_samples, shuffle, action_selection):
         obs = self.env.reset()
+        obs, rew, n_obs, dones = [], [], [], []
         done, i = False, 0
         takingRandom = False
         n_lives = 6
@@ -39,16 +40,13 @@ class Agent(object):
         while i < num_samples or (not done and i < (100 + num_samples)):
             if num_rand == self.num_conseq_rand_act: takingRandom = False
             # inject random samples into samples
-            if action_selection == 'random': #or np.random.uniform() <= self.p_rand_act or takingRandom:
+            if action_selection == 'random': 
                 act = self.env.action_space.sample()
-                # if not takingRandom: 
-                #     takingRandom = True
-                #     num_rand = 1
             else:  # action_selection == algorithm 
                 enc_ob = self.encoder.get_encoding([obs])
                 act = self.policy.sample(enc_ob)
-            n_ob, rew, done, info = self.env.step(act)
 
+            n_ob, rew, done, info = self.env.step(act)
             # dont record when agent dies
             if info['ale.lives'] != n_lives:
                 ignore = 18
@@ -57,7 +55,7 @@ class Agent(object):
                 if ignore > 0:
                     ignore -= 1
                 else:
-                    self.replay_buffer.record(obs, act, rew, n_ob, done) # temp solution for enc req.
+                    self.replay_buffer.record(obs, act, rew, n_ob, done) 
                     obs = n_ob
                     i += 1
             else:
@@ -66,22 +64,20 @@ class Agent(object):
                 i += 1
         
         # sync logger work
-        obs_n, act_n, _ = self.replay_buffer.get_obs_act_nobs()
-        enc_obs_n = self.encoder.get_encoding(obs_n)
-        logprobs = self.policy.get_logprob(enc_obs_n, act_n)
-
-        self.replay_buffer.set_logprobs(logprobs)
-        self.replay_buffer.merge_temp()
-        return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
+        # obs_n, act_n, rew_n = self.replay_buffer.get_logger_work()
+        # enc_obs_n = self.encoder.get_encoding(obs_n)
+        # logprobs = self.policy.get_logprob(enc_obs_n, act_n)
+        # self.replay_buffer.set_logprobs(logprobs)
+        # self.replay_buffer.merge_temp()
+        # return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
         
     def get_data(self, batch_size, num_samples, itr):
-        if itr < self.num_random_samples:
-            return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
-        
-        if itr % self.algorithm_rollout_rate == 0:
-            return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='algorithm')
-        else:
-            return self.replay_buffer.get_all(batch_size, master=True, shuffle=True, size=num_samples)
+        # if itr < self.num_random_samples:
+        #     return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
+        # if itr % self.algorithm_rollout_rate == 0:
+        return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='algorithm')
+        # else:
+        #     return self.replay_buffer.get_all(batch_size, master=True, shuffle=True, size=num_samples)
     
     def train(self, batch_size, num_samples, itr):
         obsList, actsList, rewardsList, n_obsList, donesList, logprobsList = self.get_data(batch_size, num_samples, itr)

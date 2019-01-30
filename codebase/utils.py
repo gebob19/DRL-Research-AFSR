@@ -30,7 +30,8 @@ class ReplayBuffer(object):
     def __init__(self, max_size=10000):
         self.obs = []
         self.acts = []
-        self.rewards = []
+        self.ext_rewards = []
+        self.int_rewards = []
         self.nxt_obs = []
         self.dones = []
         self.logprobs = []
@@ -39,49 +40,55 @@ class ReplayBuffer(object):
     def record(self, obs, act, rew, nxt_ob, done):
         self.obs.append(obs)
         self.acts.append(act)
-        self.rewards.append(rew)
+        self.ext_rewards.append(rew)
         self.nxt_obs.append(nxt_ob)
         self.dones.append(done)
         
-    def get_obs_act_nobs(self):
-        return np.array(self.obs), np.array(self.acts), np.array(self.nxt_obs)
+    def get_logger_work(self):
+        return np.array(self.obs), np.array(self.acts), np.array(self.ext_rewards)
     
     def set_logprobs(self, logprobs):
         self.logprobs += list(logprobs)
         assert len(self.logprobs) == len(self.obs), 'logprobs MUST == self.obs'
-        
-    def merge(self, obs, acts, rews, nxt_obs, dones, logprobs):
+
+    def set_intrew(self, int_rew):
+        self.int_rewards += list(int_rew)
+        assert len(self.int_rewards) == len(self.ext_rewards), 'len int rew MUST == len ext rew'
+
+    def merge(self, obs, acts, ext_rews, int_rews, nxt_obs, dones, logprobs):
         self.obs += obs
         self.acts += acts
-        self.rewards += rews
+        self.ext_rewards += ext_rews
+        self.int_rewards += int_rews
         self.nxt_obs += nxt_obs
         self.dones += dones
         self.logprobs += list(logprobs)
     
     def export(self):
-        return self.obs, self.acts, self.rewards, self.nxt_obs, self.dones, self.logprobs
+        return self.obs, self.acts, self.ext_rewards, self.int_rewards, self.nxt_obs, self.dones, self.logprobs
     
     def get_samples(self, indices):
         return (
             np.array(self.obs)[indices],
             np.array(self.acts)[indices],
-            np.array(self.rewards)[indices],
+            np.array(self.ext_rewards)[indices],
+            np.array(self.int_rewards)[indices],
             np.array(self.nxt_obs)[indices],
             np.array(self.dones)[indices],
             np.array(self.logprobs)[indices]
         )
 
     def get_all(self, batch_size, shuffle=False, size=None):
-        o, a, r, n, d, l = np.array(self.obs), np.array(self.acts), np.array(self.rewards), np.array(self.nxt_obs), np.array(self.dones), np.array(self.logprobs)
+        o, a, er, ir, n, d, l = np.array(self.obs), np.array(self.acts), np.array(self.ext_rewards), np.array(self.int_rewards), np.array(self.nxt_obs), np.array(self.dones), np.array(self.logprobs)
         if shuffle:
             indxs = np.arange(o.shape[0])
             np.random.shuffle(indxs)
-            o, a, r, n, d, l = o[indxs], a[indxs], r[indxs], n[indxs], d[indxs], l[indxs]
+            o, a, er, ir, n, d, l = o[indxs], a[indxs], er[indxs], ir[indxs], n[indxs], d[indxs], l[indxs]
         if size is not None:
-            o, a, r, n, d, l = o[-size:], a[-size:], r[-size:], n[-size:], d[-size:], l[-size:]
+            o, a, er, ir, n, d, l = o[-size:], a[-size:], er[-size:], ir[-size:], n[-size:], d[-size:], l[-size:]
         batched_dsets = []
         # batch up data
-        for dset in [o, a, r, n, d, l]:
+        for dset in [o, a, er, ir, n, d, l]:
             bdset = []
             for i in range(0, len(dset), batch_size):
                  bdset.append(np.array(dset[i:i+batch_size]))
@@ -94,7 +101,8 @@ class ReplayBuffer(object):
             # FIFO
             self.obs = self.obs[-diff:]
             self.acts = self.acts[-diff:]
-            self.rewards = self.rewards[-diff:]
+            self.ext_rewards = self.ext_rewards[-diff:]
+            self.int_rewards = self.int_rewards[-diff:]
             self.nxt_obs = self.nxt_obs[-diff:]
             self.dones = self.dones[-diff:]
             self.logprobs = self.logprobs[-diff:]
@@ -102,7 +110,8 @@ class ReplayBuffer(object):
     def flush(self):
         self.obs = []
         self.acts = []
-        self.rewards = []
+        self.ext_rewards = []
+        self.int_rewards = []
         self.nxt_obs = []
         self.dones = []
         self.logprobs = []
@@ -117,73 +126,27 @@ class MasterBuffer(object):
     
     def record(self, *args):
         self.temp_replay.record(*args)
-
-    def get_temp_rewards(self):
-        return np.array(self.temp_replay.rewards)
         
-    def get_obs_act_nobs(self):
-        return self.temp_replay.get_obs_act_nobs()
+    def get_logger_work(self):
+        return self.temp_replay.get_logger_work()
     
     def get_obs(self):
         return np.array(self.master_replay.obs)
     
-    def set_logprobs(self, logprobs):
+    def set_other(self, logprobs, int_rews):
         self.temp_replay.logprobs = logprobs
+        self.temp_replay.int_rewards = int_rews
 
     def merge_temp(self):
         tempdata = self.temp_replay.export()
         self.master_replay.merge(*tempdata)
         self.master_replay.update_size()
-    
-    def get_batch(self, batch_size):
-        indices = np.random.randint(0, len(self.master_replay), batch_size)
-        return self.master_replay.get_samples(indices)
 
     def get_all(self, batch_size, master=False, shuffle=False, size=None):
         if not master:
             return self.temp_replay.get_all(batch_size, shuffle)
         else:
-            return self.master_replay.get_all(batch_size, shuffle, size)
-
-    
-    ## Density Sampling Start ##
-    # credit to hw5
-    def get_density_batch(self, states, batch_size):
-        if len(self.master_replay) >= 2*len(states):
-            positives, negatives = self.sample_idxs_replay(states, batch_size)
-        else:
-            positives, negatives = self.sample_idxs(states, batch_size)
-        labels = np.concatenate([np.ones((batch_size, 1)), np.zeros((batch_size, 1))], axis=0)
-        return positives, negatives, labels
-    
-    def sample_idxs(self, states, batch_size):
-        states = copy.deepcopy(states)
-        data_size = len(states)
-        pos_idxs = np.random.randint(data_size, size=batch_size)
-        continue_sampling = True
-        while continue_sampling:
-            neg_idxs = np.random.randint(data_size, size=batch_size)
-            if np.all(pos_idxs != neg_idxs):
-                continue_sampling = False
-        positives = np.concatenate([states[pos_idxs], states[pos_idxs]], axis=0)
-        negatives = np.concatenate([states[pos_idxs], states[neg_idxs]], axis=0)
-        return positives, negatives
-
-    def sample_idxs_replay(self, states, batch_size):
-        states = np.asarray(copy.deepcopy(states))
-        data_size = len(states)
-        pos_idxs = np.random.randint(data_size, size=batch_size)
-        neg_idxs = np.random.randint(data_size, len(self.master_replay), size=batch_size)
-        
-        buffer_states = self.get_obs()
-        positives = np.concatenate([states[pos_idxs], states[pos_idxs]], axis=0)
-        negatives = np.concatenate([states[pos_idxs], buffer_states[neg_idxs]], axis=0)
-        return positives, negatives
-    ## Density Sampling End ##        
-    
-    def get_temp_reward_info(self):
-        rewards = np.asarray(self.temp_replay.rewards)
-        return np.sum(rewards), np.std(rewards)
+            return self.master_replay.get_all(batch_size, shuffle, size)    
         
     def flush_temp(self):
         self.temp_replay.flush()

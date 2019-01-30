@@ -15,6 +15,7 @@ class Agent(object):
         # Args
         self.rnd_train_itr = args['rnd_train_itr']
         self.encoder_train_itr = args['encoder_train_itr']
+        self.encoder_update_freq = args['encoder_update_freq']
 
         self.num_conseq_rand_act = args['num_conseq_rand_act']
         self.num_random_samples = args['num_random_samples']
@@ -110,8 +111,10 @@ class Agent(object):
         enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.get_data(batch_size, num_samples, itr)
     
         for b_eobs, b_acts, b_erew, b_irew, b_enobs, b_dones in zip(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n):
-            for _ in range(self.encoder_train_itr):
-                enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
+
+            if itr % self.encoder_update_freq == 0:
+                for _ in range(self.encoder_train_itr):
+                    enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
 
             rnd_loss = self.rnd.train(b_eobs)
             # 1 critic temp soln

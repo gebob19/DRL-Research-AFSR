@@ -55,7 +55,8 @@ def get_args(env, test_run=False):
     # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
         'rnd_train_itr': 1,
-        'encoder_train_itr': 2,
+        'encoder_update_freq': 10,
+        'encoder_train_itr': 5,
         'num_conseq_rand_act': 10,
         'num_random_samples': 5,
         'p_rand': 0.5,                  # p(random action during rollout)

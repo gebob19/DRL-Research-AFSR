@@ -207,6 +207,7 @@ class Logger(object):
                 'critic_loss':[],
             },
             'env': {
-                'rewards': []
+                'int_rewards': [],
+                'ext_rewards': []
             }
         }

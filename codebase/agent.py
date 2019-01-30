@@ -78,6 +78,9 @@ class Agent(object):
         enc_obs = self.encoder.get_encoding(obs_n)
         enc_n_obs = self.encoder.get_encoding(n_obs_n)
         int_rew = self.rnd.get_rewards(enc_obs)
+        
+        self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew, ext_rew_n])
+
         ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
         return self.batch(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n, batch_size, shuffle)
@@ -111,7 +114,7 @@ class Agent(object):
                 enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
 
             rnd_loss = self.rnd.train(b_eobs)
-            # 1 critic temp 
+            # 1 critic temp soln
             total_r = b_erew + b_irew
             critic_loss = self.policy.train_critic(b_eobs, b_enobs, total_r, b_dones)
             adv = self.policy.estimate_adv(b_eobs, total_r, b_enobs, b_dones)

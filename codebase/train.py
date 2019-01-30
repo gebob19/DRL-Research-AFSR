@@ -70,21 +70,6 @@ if __name__ == '__main__':
                     end = time.time()
                     print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
                     print('size of logger:{}, size of buf:{}'.format(logger.size, len(replay_buffer.master_replay)))
-                    # if itr % 50 == 0 and itr != 0:
-                    #     obs = env.reset()
-                    #     i = 0
-                    #     while i < 200:
-                    #         env.render()
-                    #         try:
-                    #             act = int(input('Press a key to continue...'))
-                    #         except (ValueError, TypeError):
-                    #             act = 20
-                    #         if act not in range(17):
-                    #             enc_ob = encoder.get_encoding([obs])
-                    #             act = policy.get_best_action(enc_ob)
-                    #         obs, rew, done, _ = env.step(act)
-                    #         if done: break
-                    #         i+=1
 
             finally: # safe exit sooner
                 if save:

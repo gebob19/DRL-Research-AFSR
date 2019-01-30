@@ -24,7 +24,7 @@ if __name__ == '__main__':
     restore = 0
     save = 1
     
-    test_run = 1
+    test_run = 0
     view = 0
 
     if view:

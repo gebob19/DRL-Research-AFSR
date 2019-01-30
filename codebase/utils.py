@@ -22,12 +22,14 @@ def Network(input_tensor, output_size, scope, fsize, conv_depth=0, n_hidden_dens
                 if strides_count < n_strides:
                     x = tf.layers.conv2d(x, fsize, (3, 3), strides=(2, 2), kernel_initializer=kernel_init)
                     strides_count += 1
-            
             # Dense Layers
-            x = tf.layers.flatten(x)
-            for _ in range(n_hidden_dense):
-                x = tf.layers.dense(x, fsize, activation=activation, kernel_initializer=kernel_init)
-            y = tf.layers.dense(x, output_size, activation=output_activation, kernel_initializer=kernel_init)
+            if output_size is not None:
+                x = tf.layers.flatten(x)
+                for _ in range(n_hidden_dense):
+                    x = tf.layers.dense(x, fsize, activation=activation, kernel_initializer=kernel_init)
+                y = tf.layers.dense(x, output_size, activation=output_activation, kernel_initializer=kernel_init)
+            else:
+                y = x
         return y
 
 def make_env(env_id, width, height):

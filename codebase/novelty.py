@@ -10,10 +10,15 @@ from utils import Network
 
 class Encoder(object):
     def __init__(self, graph_args):
+        self.obs_dim = graph_args['obs_dim']
         self.act_dim = graph_args['act_dim']
         self.n_layers_frozen = graph_args['n_layers_frozen']
         self.act_layer_extract = graph_args['act_layer_extract']
         self.learning_rate = graph_args['learning_rate']
+
+        self.fsize = graph_args['fsize']
+        self.conv_depth = graph_args['conv_depth']
+        self.n_strides = graph_args['n_strides']
 
         assert self.n_layers_frozen < self.act_layer_extract, 'Cannot freeze before action extraction'
 
@@ -22,10 +27,8 @@ class Encoder(object):
         actnn_layers = graph_args['actnn_layers']
         actnn_units = graph_args['actnn_units']
         # encoding pass
-        self.obs_ph = tf.placeholder(shape=(None, 224, 224, 3), dtype=tf.float32) 
-        nn = ResNet50(include_top=False, weights='imagenet', input_tensor=self.obs_ph)
-        self.freeze(nn)
-        self.obs_encoded = nn.layers[self.act_layer_extract].output
+        self.obs_ph = tf.placeholder(shape=((None,) + self.obs_dim), dtype=tf.float32) 
+        self.obs_encoded = Network(self.obs_ph, None, 'encoder', self.fsize, self.conv_depth, activation=tf.nn.leaky_relu, n_strides=self.n_strides)
 
         # start of action neural net
         obs_enc_shape = self.obs_encoded.get_shape().as_list()
@@ -63,15 +66,10 @@ class Encoder(object):
             '0': 4,     #  do nothing action  group = 4
         }
 
-    def freeze(self, x):
-        for layer in x.layers[:self.n_layers_frozen]:
-            layer.trainable = False
-    
     def set_sess(self, sess):
         self.sess = sess
     
     def get_encoding(self, obs_n):
-        # resized_obs = self.multi_t_resize(obs_n)
         return self.sess.run(self.obs_encoded, feed_dict={
             self.obs_ph: obs_n
         })
@@ -93,13 +91,13 @@ class Encoder(object):
     def encode_actions(self, act_n):
         return np.array(list(map(self.to_class, act_n)))
     
-    def multi_t_resize(self, obs_n):
-        with ThreadPoolExecutor(8) as e: pre_resized_obs = [e.submit(resize, obs) for obs in obs_n]
-        resized_obs = np.asarray([obs.result() for obs in as_completed(pre_resized_obs)])
-        return resized_obs
+    # def multi_t_resize(self, obs_n):
+    #     with ThreadPoolExecutor(8) as e: pre_resized_obs = [e.submit(resize, obs) for obs in obs_n]
+    #     resized_obs = np.asarray([obs.result() for obs in as_completed(pre_resized_obs)])
+    #     return resized_obs
 
-def resize(obs):
-    return cv2.resize(obs, (224, 224))
+# def resize(obs):
+#     return cv2.resize(obs, (224, 224))
 
 class RND(object):
     def __init__(self, in_shape, graph_args):

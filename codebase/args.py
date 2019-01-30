@@ -19,14 +19,17 @@ def get_args(env, test_run=False):
     }
 
     encoder_args = {
+        'obs_dim': env.observation_space.shape,
         'act_dim': 5, # number of action classes
         'n_layers_frozen': 10,
         'act_layer_extract': 30,
         'learning_rate': 1e-6,
         'actnn_layers': 2,
-        'actnn_units': 128
+        'actnn_units': 128,
+        'fsize': 64,
+        'conv_depth': 6,
+        'n_strides': 1
     }
-
     target_N = {
         'fsize': 32,
         'conv_depth': 4,

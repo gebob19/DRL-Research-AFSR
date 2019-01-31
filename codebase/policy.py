@@ -32,7 +32,7 @@ class PPO(object):
         # policy update
         action_enc = tf.one_hot(self.act, depth=self.act_dim)
         self.logprob = -1 * tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy_distrib, labels=action_enc)
-        self.actor_loss = -tf.reduce_mean(self.logprob * self.adv)
+        self.actor_loss = -tf.reduce_mean(self.logprob * self.adv - 1e-3 * self.logprob)
         self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.actor_loss)
         
         # critic definition with encoded state

@@ -7,15 +7,15 @@ def get_args(env, test_run=False):
         'ob_dim': env.observation_space.shape,
         'act_dim': env.action_space.n - 1,
         'clip_range': 0.2,
-        'n_hidden': 5,
+        'n_hidden': 3,
         'hid_size': 64,
-        'learning_rate': 5e-3,
-        'num_target_updates': 5,
-        'num_grad_steps_per_target_update': 3
+        'learning_rate': 1e-4,
+        'num_target_updates': 10,
+        'num_grad_steps_per_target_update': 5
     }
 
     adv_args = {
-        'gamma': 0.9999999
+        'gamma': 0.99
     }
 
     encoder_args = {

@@ -25,7 +25,7 @@ if __name__ == '__main__':
     save = 1
     
     test_run = 0
-    view = 0
+    view = 1
 
     if view:
         train = False
@@ -86,7 +86,7 @@ if __name__ == '__main__':
                     act = 20
                 if act not in range(17):
                     enc_ob = encoder.get_encoding([obs])
-                    act = policy.get_best_action(enc_ob)
+                    act = policy.sample(enc_ob)
                 obs, rew, done, _ = env.step(act)
                 if done: break
 

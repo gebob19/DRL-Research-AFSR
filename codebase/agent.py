@@ -50,7 +50,7 @@ class Agent(object):
     def sample_env(self, batch_size, num_samples, shuffle):
         done, i = False, 0
         n_lives, ignore = 6, 0
-        obs_n, act_n, ext_rew_n, n_obs_n, dones_n = [], [], [], [], []
+        obs_n, act_n, ext_rew_n, int_rew_n, n_obs_n, dones_n = [], [], [], [], [], []
         
         # policy rollout
         obs = self.env.reset()
@@ -58,6 +58,7 @@ class Agent(object):
             enc_ob = self.encoder.get_encoding([obs])
             act = self.policy.sample(enc_ob)
             n_obs, rew, done, info = self.env.step(act)
+            int_rew = self.rnd.get_rewards(enc_ob)[0]
             
             # dont record when agent dies
             if info['ale.lives'] != n_lives:
@@ -65,11 +66,13 @@ class Agent(object):
             if ignore > 0: ignore -= 1
             else:
                 # running normalization
-                if i > 0:
+                if i > 10:
                     obs, n_obs = self.norm_clip(obs, obs_n), self.norm_clip(n_obs, n_obs_n)
+                if i > 20:
+                    int_rew = self.norm(int_rew, int_rew_n)
 
                 obs_n.append(obs); ext_rew_n.append(rew); n_obs_n.append(n_obs)
-                act_n.append(act); dones_n.append(done)
+                act_n.append(act); dones_n.append(done); int_rew_n.append(int_rew)
                 if done:
                     obs = self.env.reset()
                     done = True
@@ -78,13 +81,12 @@ class Agent(object):
 
         enc_obs = self.encoder.get_encoding(obs_n)
         enc_n_obs = self.encoder.get_encoding(n_obs_n)
-        int_rew = self.rnd.get_rewards(enc_obs)
-        
-        self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew, ext_rew_n])
-
         ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
-        return self.batch(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n, batch_size, shuffle)
+        self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
+
+
+        return self.batch(enc_obs, act_n, ext_rew_n, int_rew_n, enc_n_obs, dones_n, batch_size, shuffle)
         
         # sync logger work
         # obs_n, act_n, rew_n = self.replay_buffer.get_logger_work()
@@ -96,8 +98,11 @@ class Agent(object):
     
     def norm_clip(self, ob, obs):
         # normalize and clip before training
-        nrm_ob = (ob - np.mean(obs)) / np.var(obs)
+        nrm_ob = (ob - np.mean(obs)) / np.var(np.array(obs) + 1e-6)
         return np.clip(nrm_ob, -5, 5)
+    
+    def norm(self, r, rews):
+        return (r - np.mean(rews)) / np.var(np.array(rews) + 1e-6)
         
     def get_data(self, batch_size, num_samples, itr):
         # if itr < self.num_random_samples:
@@ -115,6 +120,8 @@ class Agent(object):
             if itr % self.encoder_update_freq == 0:
                 for _ in range(self.encoder_train_itr):
                     enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
+                    self.logger.log('encoder', ['loss'], [enc_loss])
+
 
             rnd_loss = self.rnd.train(b_eobs)
             # 1 critic temp soln
@@ -126,4 +133,3 @@ class Agent(object):
             if itr % self.log_rate == 0:
                 self.logger.log('density', ['loss'], [rnd_loss])
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
-                self.logger.log('encoder', ['loss'], [enc_loss])

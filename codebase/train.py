@@ -58,7 +58,7 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         agent.set_session(sess)
         if restore: 
-            saver.restore(sess, "./model_data/model.ckpt")
+            saver.restore(sess, "./logs/action_head_exp1000/model_data/model.ckpt")
             agent.num_random_samples = 5
 
         if train:

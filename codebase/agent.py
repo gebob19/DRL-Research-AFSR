@@ -65,12 +65,6 @@ class Agent(object):
                 ignore = 18; n_lives -= 1
             if ignore > 0: ignore -= 1
             else:
-                # running normalization
-                if i > 10:
-                    obs, n_obs = self.norm_clip(obs, obs_n), self.norm_clip(n_obs, n_obs_n)
-                if i > 20:
-                    int_rew = self.norm(int_rew, int_rew_n)
-
                 obs_n.append(obs); ext_rew_n.append(rew); n_obs_n.append(n_obs)
                 act_n.append(act); dones_n.append(done); int_rew_n.append(int_rew)
                 if done:
@@ -83,9 +77,10 @@ class Agent(object):
         enc_n_obs = self.encoder.get_encoding(n_obs_n)
         ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
+        enc_obs, enc_n_obs = self.norm_clip(enc_obs), self.norm_clip(enc_n_obs)
+        int_rew_n = self.norm(int_rew_n)
+
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
-
-
         return self.batch(enc_obs, act_n, ext_rew_n, int_rew_n, enc_n_obs, dones_n, batch_size, shuffle)
         
         # sync logger work
@@ -96,13 +91,13 @@ class Agent(object):
         # self.replay_buffer.merge_temp()
         # return self.replay_buffer.get_all(batch_size, shuffle=shuffle)
     
-    def norm_clip(self, ob, obs):
+    def norm_clip(self, obs):
         # normalize and clip before training
-        nrm_ob = (ob - np.mean(obs)) / np.var(np.array(obs) + 1e-6)
-        return np.clip(nrm_ob, -5, 5)
+        nrm_obs = (obs - np.mean(obs)) / (np.var(np.array(obs)) + 1e-6)
+        return np.clip(nrm_obs, -5, 5)
     
-    def norm(self, r, rews):
-        return (r - np.mean(rews)) / np.var(np.array(rews) + 1e-6)
+    def norm(self, r):
+        return (r - np.mean(r)) / (np.var(np.array(r)) + 1e-6)
         
     def get_data(self, batch_size, num_samples, itr):
         # if itr < self.num_random_samples:

@@ -46,7 +46,7 @@ def get_args(env, test_run=False):
         'learning_rate': 1e-3,
         'out_size': 512,
         'bonus_multiplier': 1,
-        'proportion_to_update': .9,
+        'proportion_to_update': .25,
         'bonus_mean': 0,
         'bonus_var': 1,
         'target_args': target_N,

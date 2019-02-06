@@ -15,20 +15,26 @@ from agent import Agent
 from noEncAgent import NoEncoderAgent
 from args import get_args 
 
+
 if __name__ == '__main__':
     env = make_env('MontezumaRevenge-v0', 84, 84)
-    n_iter = 1000
+    n_iter = 613
     num_samples = 256
     batch_size = 32
-    enc_threshold = 1.5
-    use_encoder = False
+    enc_threshold = 2.5
+    init_enc_threshold = 1.0 
+    use_encoder = 1
+    if use_encoder:
+        model_name = 'enc-mult-rew'
+    else:
+        model_name = 'no-enc'
     
     train = 1
     restore = 0
     save = 1
     
-    test_run = 1
-    view = 0
+    test_run = 0
+    view = 1
 
     if view:
         train = False
@@ -55,6 +61,7 @@ if __name__ == '__main__':
         policy = PPO(policy_graph_args, adv_args, (None, 84, 84, 1))
         rnd = RND((None, 84, 84, 1), rnd_args)
         agent = NoEncoderAgent(env, policy, rnd, replay_buffer, logger, agent_args)
+    agent.logger.model_name = model_name
 
     # training parameters
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
@@ -65,14 +72,14 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         agent.set_session(sess)
         if restore: 
-            saver.restore(sess, "./model_data/model.ckpt")
+            saver.restore(sess, "./model_data/model-{}.ckpt".format(model_name))
             agent.num_random_samples = 5
 
         if train:
             try:
                 if use_encoder:
                     print('training encoder...')
-                    agent.init_encoder(batch_size, num_samples, enc_threshold)
+                    agent.init_encoder(batch_size, num_samples, init_enc_threshold)
                 print('starting training...')
                 for itr in range(n_iter):
                     start = time.time()
@@ -84,7 +91,7 @@ if __name__ == '__main__':
             finally: # safe exit sooner
                 if save:
                     logger.export()
-                    saver.save(sess, './model_data/longermodel.ckpt')
+                    saver.save(sess, "./model_data/model-{}.ckpt".format(model_name))
         
         if view: # view
             obs = env.reset()
@@ -94,10 +101,20 @@ if __name__ == '__main__':
                     act = int(input('Press a key to continue...'))
                 except (ValueError, TypeError):
                     act = 20
-                if act not in range(17):
-                    enc_ob = encoder.get_encoding([obs])
-                    act = policy.sample(enc_ob)
+                if act == 0:
+                    if use_encoder:
+                        obs = encoder.get_encoding([obs])
+                    else:
+                        obs = [obs]
+                    act = policy.get_best_action(obs)
+                elif act not in range(17):
+                    if use_encoder:
+                        obs = encoder.get_encoding([obs])
+                    else:
+                        obs = [obs]
+                    act = policy.sample(obs)
                     # act = policy.get_best_action(enc_ob)
+                    
                 obs, rew, done, _ = env.step(act)
                 if done: break
 

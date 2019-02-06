@@ -83,8 +83,8 @@ class Agent(object):
         enc_n_obs = self.encoder.get_encoding(n_obs_n)
         ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
-        enc_obs, enc_n_obs = self.norm_clip(enc_obs), self.norm_clip(enc_n_obs)
-        int_rew_n = self.norm(int_rew_n)
+        enc_obs, enc_n_obs = self.norm(enc_obs), self.norm(enc_n_obs)
+        int_rew_n = self.norm(int_rew_n) * 10e2
 
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
         return self.batch(enc_obs, act_n, ext_rew_n, int_rew_n, enc_n_obs, dones_n, batch_size, shuffle)
@@ -148,6 +148,6 @@ class Agent(object):
         
         # if encoder becomes in accurate then fine tune on new samples
         last_enc_loss = self.encoder.get_loss(b_eobs, b_enobs, b_acts)
-        if (np.mean(last_enc_loss) < encoder_loss_thresh):
+        if (np.mean(last_enc_loss) > encoder_loss_thresh):
             self.train_enc_next_itr = True
             print('Updating Encoder....')

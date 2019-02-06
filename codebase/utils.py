@@ -200,6 +200,7 @@ class Logger(object):
                 'ext_rewards': []
             }
         }
+        self.model_name = ''
         
     def log(self, tag, subtags, data):
         for subtag, d in zip(subtags, data):
@@ -212,7 +213,7 @@ class Logger(object):
             self.size = 0
 
     def export(self):
-        fname = '{}.pkl'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        fname = '{}-{}.pkl'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), self.model_name)
         with open(fname, 'wb') as f:
             pickle.dump(self.logs, f, protocol=pickle.HIGHEST_PROTOCOL)
 

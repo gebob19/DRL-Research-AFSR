@@ -46,8 +46,8 @@ if __name__ == '__main__':
     obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
     policy = PPO(policy_graph_args, adv_args, obs_encoded_shape)
     rnd = RND(obs_encoded_shape, rnd_args)
-
     agent = Agent(env, policy, encoder, rnd, replay_buffer, logger, agent_args)
+    
 
     # training parameters
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)

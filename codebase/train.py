@@ -12,6 +12,7 @@ from policy import PPO
 from novelty import Encoder, RND
 from dynamics import DynamicsModel
 from agent import Agent
+from noEncAgent import NoEncoderAgent
 from args import get_args 
 
 if __name__ == '__main__':
@@ -19,13 +20,15 @@ if __name__ == '__main__':
     n_iter = 1000
     num_samples = 256
     batch_size = 32
+    enc_threshold = 1.5
+    use_encoder = False
     
     train = 1
-    restore = 1
+    restore = 0
     save = 1
     
-    test_run = 0
-    view = 1
+    test_run = 1
+    view = 0
 
     if view:
         train = False
@@ -42,12 +45,16 @@ if __name__ == '__main__':
     replay_buffer = MasterBuffer(max_size=5000)
     logger = Logger(max_size=100000)
 
-    encoder = Encoder(encoder_args)
-    obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
-    policy = PPO(policy_graph_args, adv_args, obs_encoded_shape)
-    rnd = RND(obs_encoded_shape, rnd_args)
-    agent = Agent(env, policy, encoder, rnd, replay_buffer, logger, agent_args)
-    
+    if use_encoder:
+        encoder = Encoder(encoder_args)
+        obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
+        policy = PPO(policy_graph_args, adv_args, obs_encoded_shape)
+        rnd = RND(obs_encoded_shape, rnd_args)
+        agent = Agent(env, policy, encoder, rnd, replay_buffer, logger, agent_args)
+    else:
+        policy = PPO(policy_graph_args, adv_args, (None, 84, 84, 1))
+        rnd = RND((None, 84, 84, 1), rnd_args)
+        agent = NoEncoderAgent(env, policy, rnd, replay_buffer, logger, agent_args)
 
     # training parameters
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
@@ -63,10 +70,13 @@ if __name__ == '__main__':
 
         if train:
             try:
-                print('Starting training...')
+                if use_encoder:
+                    print('training encoder...')
+                    agent.init_encoder(batch_size, num_samples, enc_threshold)
+                print('starting training...')
                 for itr in range(n_iter):
                     start = time.time()
-                    agent.train(batch_size, num_samples, itr)
+                    agent.train(batch_size, num_samples, enc_threshold, itr)
                     end = time.time()
                     print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
                     print('size of logger:{}, size of buf:{}'.format(logger.size, len(replay_buffer.master_replay)))

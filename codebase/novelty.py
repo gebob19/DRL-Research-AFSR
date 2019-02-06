@@ -15,6 +15,7 @@ class Encoder(object):
         self.n_layers_frozen = graph_args['n_layers_frozen']
         self.act_layer_extract = graph_args['act_layer_extract']
         self.learning_rate = graph_args['learning_rate']
+        self.enc_act_head = enc_act_head
 
         self.fsize = graph_args['fsize']
         self.conv_depth = graph_args['conv_depth']
@@ -84,6 +85,15 @@ class Encoder(object):
             self.actnn_obs_ph: n_obs_n,
         })
         return loss
+
+    def get_loss(self, obs_n, n_obs_n, act_n):
+        # encode into action classes
+        enc_act_n = self.encode_actions(act_n) 
+        return self.sess.run(self.loss, feed_dict={
+            self.prev_act_ph: enc_act_n,
+            self.actnn_prev_obs_ph: obs_n,
+            self.actnn_obs_ph: n_obs_n,
+        })
     
     def to_class(self, act):
         return self.classes[str(act)]

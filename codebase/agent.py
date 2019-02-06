@@ -12,6 +12,8 @@ class Agent(object):
         # Utils
         self.replay_buffer = replay_buffer
         self.logger = logger
+        self.last_enc_loss = None
+        self.train_enc_next_itr = False
         # Args
         self.rnd_train_itr = args['rnd_train_itr']
         self.encoder_train_itr = args['encoder_train_itr']
@@ -47,7 +49,7 @@ class Agent(object):
             batched_dsets.append(np.array(bdset))
         return tuple(batched_dsets)
         
-    def sample_env(self, batch_size, num_samples, shuffle):
+    def sample_env(self, batch_size, num_samples, shuffle, algorithm='algorithm'):
         done, i = False, 0
         n_lives, ignore = 6, 0
         obs_n, act_n, ext_rew_n, int_rew_n, n_obs_n, dones_n = [], [], [], [], [], []
@@ -56,7 +58,11 @@ class Agent(object):
         obs = self.env.reset()
         while i < num_samples or (not done and i < (100 + num_samples)):
             enc_ob = self.encoder.get_encoding([obs])
-            act = self.policy.sample(enc_ob)
+            if algorithm == 'algorithm':
+                act = self.policy.sample(enc_ob)
+            else: # algorithm == 'random'
+                act = self.env.action_space.sample()
+
             n_obs, rew, done, info = self.env.step(act)
             int_rew = self.rnd.get_rewards(enc_ob)[0]
             
@@ -106,17 +112,28 @@ class Agent(object):
         return self.sample_env(batch_size, num_samples, shuffle=True)
         # else:
         #     return self.replay_buffer.get_all(batch_size, master=True, shuffle=True, size=num_samples)
-    
-    def train(self, batch_size, num_samples, itr):
-        enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.get_data(batch_size, num_samples, itr)
-    
-        for b_eobs, b_acts, b_erew, b_irew, b_enobs, b_dones in zip(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n):
 
-            if itr % self.encoder_update_freq == 0:
+    def init_encoder(self, batch_size, num_samples, loss_threshold):
+        threshold_met, i = False, 0
+        while not threshold_met and i < 500:
+            enc_obs, act_n, _, _, enc_n_obs, _  = self.sample_env(batch_size, num_samples, shuffle=True, algorithm='random')
+            for b_eobs, b_acts, b_enobs in zip(enc_obs, act_n, enc_n_obs):
                 for _ in range(self.encoder_train_itr):
                     enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
-                    self.logger.log('encoder', ['loss'], [enc_loss])
-
+                    self.logger.log('encoder', ['loss'], [np.mean(enc_loss)])
+                    if np.mean(enc_loss) < loss_threshold: threshold_met = True
+                    i += 1
+        if threshold_met: print('Encoder init threshold was met...')
+        else: print('Encoder init threshold was NOT met...')
+    
+    def train(self, batch_size, num_samples, encoder_loss_thresh, itr):
+        enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.get_data(batch_size, num_samples, itr)
+        for b_eobs, b_acts, b_erew, b_irew, b_enobs, b_dones in zip(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n):
+            
+            if self.train_enc_next_itr:
+                for _ in range(self.encoder_train_itr):
+                    enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
+                    self.logger.log('encoder', ['loss'], [np.mean(enc_loss)])
 
             rnd_loss = self.rnd.train(b_eobs)
             # 1 critic temp soln
@@ -128,3 +145,9 @@ class Agent(object):
             if itr % self.log_rate == 0:
                 self.logger.log('density', ['loss'], [rnd_loss])
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
+        
+        # if encoder becomes in accurate then fine tune on new samples
+        last_enc_loss = self.encoder.get_loss(b_eobs, b_enobs, b_acts)
+        if (np.mean(last_enc_loss) < encoder_loss_thresh):
+            self.train_enc_next_itr = True
+            print('Updating Encoder....')

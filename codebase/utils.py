@@ -35,6 +35,7 @@ def Network(input_tensor, output_size, scope, fsize, conv_depth=0, n_hidden_dens
 def make_env(env_id, width, height):
     env = gym.make(env_id)
     env = WarpFrame(env, width, height)
+    env = StickyActionEnv(env)
     return env
 
 class WarpFrame(gym.ObservationWrapper):
@@ -50,6 +51,25 @@ class WarpFrame(gym.ObservationWrapper):
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         return frame[:, :, None]
+
+
+class StickyActionEnv(gym.Wrapper):
+    def __init__(self, env, p=0.25):
+        super(StickyActionEnv, self).__init__(env)
+        self.p = p
+        self.last_action = 0
+
+    def reset(self):
+        self.last_action = 0
+        return self.env.reset()
+
+    def step(self, action):
+        if self.unwrapped.np_random.uniform() < self.p:
+            action = self.last_action
+        self.last_action = action
+        obs, reward, done, info = self.env.step(action)
+        return obs, reward, done, info
+
 
 class ReplayBuffer(object):
     def __init__(self, max_size=10000):

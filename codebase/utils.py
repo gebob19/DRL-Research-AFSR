@@ -38,6 +38,8 @@ def make_env(env_id, width, height):
     env = StickyActionEnv(env)
     return env
 
+
+## https://github.com/openai/random-network-distillation/blob/master/atari_wrappers.py
 class WarpFrame(gym.ObservationWrapper):
     def __init__(self, env, width, height):
         """Warp frames to 84x84 as done in the Nature paper and later work."""

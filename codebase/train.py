@@ -17,11 +17,11 @@ from args import get_args
 if __name__ == '__main__':
     env = make_env('MontezumaRevenge-v0', 84, 84)
     n_iter = 1000
-    num_samples = 128
+    num_samples = 256
     batch_size = 32
     
     train = 1
-    restore = 0
+    restore = 1
     save = 1
     
     test_run = 0
@@ -58,7 +58,7 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         agent.set_session(sess)
         if restore: 
-            saver.restore(sess, "./logs/action_head_exp1000/model_data/model.ckpt")
+            saver.restore(sess, "./model_data/model.ckpt")
             agent.num_random_samples = 5
 
         if train:
@@ -74,7 +74,7 @@ if __name__ == '__main__':
             finally: # safe exit sooner
                 if save:
                     logger.export()
-                    saver.save(sess, './model_data/model.ckpt')
+                    saver.save(sess, './model_data/longermodel.ckpt')
         
         if view: # view
             obs = env.reset()
@@ -87,6 +87,7 @@ if __name__ == '__main__':
                 if act not in range(17):
                     enc_ob = encoder.get_encoding([obs])
                     act = policy.sample(enc_ob)
+                    # act = policy.get_best_action(enc_ob)
                 obs, rew, done, _ = env.step(act)
                 if done: break
 

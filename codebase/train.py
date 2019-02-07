@@ -17,7 +17,7 @@ from args import get_args
 
 
 if __name__ == '__main__':
-    env = make_env('MontezumaRevenge-v0', 84, 84)
+    env = make_env('Breakout-v0', 84, 84)
     n_iter = 613
     num_samples = 256
     batch_size = 32
@@ -33,8 +33,8 @@ if __name__ == '__main__':
     restore = 0
     save = 1
     
-    test_run = 0
-    view = 1
+    test_run = 1
+    view = 0
 
     if view:
         train = False

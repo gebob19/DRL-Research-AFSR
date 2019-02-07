@@ -84,7 +84,7 @@ class Agent(object):
         # ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
         enc_obs, enc_n_obs = self.norm(enc_obs), self.norm(enc_n_obs)
-        # int_rew_n = self.norm(int_rew_n)
+        int_rew_n = self.norm(int_rew_n)
 
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
         return self.batch(enc_obs, act_n, ext_rew_n, int_rew_n, enc_n_obs, dones_n, batch_size, shuffle)
@@ -135,15 +135,15 @@ class Agent(object):
                     enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
                     self.logger.log('encoder', ['loss'], [np.mean(enc_loss)])
 
-            # rnd_loss = self.rnd.train(b_eobs)
+            rnd_loss = self.rnd.train(b_eobs)
             # 1 critic temp soln
-            total_r = b_erew #+ b_irew
+            total_r = b_erew + b_irew
             critic_loss = self.policy.train_critic(b_eobs, b_enobs, total_r, b_dones)
             adv = self.policy.estimate_adv(b_eobs, total_r, b_enobs, b_dones)
             actor_loss = self.policy.train_actor(b_eobs, b_acts, adv)
            
             if itr % self.log_rate == 0:
-                # self.logger.log('density', ['loss'], [rnd_loss])
+                self.logger.log('density', ['loss'], [rnd_loss])
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
         
         # if encoder becomes in accurate then fine tune on new samples

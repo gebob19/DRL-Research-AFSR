@@ -20,7 +20,7 @@ def get_args(env, test_run=False):
 
     encoder_args = {
         'obs_dim': env.observation_space.shape,
-        'act_dim': 5, # number of action classes
+        'act_dim': env.action_space.n - 1, # number of action classes
         'n_layers_frozen': 10,
         'act_layer_extract': 30,
         'learning_rate': 1e-6,

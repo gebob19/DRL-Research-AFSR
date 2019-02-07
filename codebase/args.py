@@ -11,7 +11,7 @@ def get_args(env, test_run=False):
         'hid_size': 64,
         'learning_rate': 1e-4,
         'num_target_updates': 10,
-        'num_grad_steps_per_target_update': 5
+        'num_grad_steps_per_target_update': 10
     }
 
     adv_args = {
@@ -25,9 +25,9 @@ def get_args(env, test_run=False):
         'act_layer_extract': 30,
         'learning_rate': 1e-6,
         'actnn_layers': 2,
-        'actnn_units': 128,
+        'actnn_units': 64,
         'fsize': 64,
-        'conv_depth': 6,
+        'conv_depth': 4,
         'n_strides': 1
     }
     target_N = {
@@ -56,7 +56,7 @@ def get_args(env, test_run=False):
     agent_args = {
         'rnd_train_itr': 1,
         'encoder_update_freq': 10,
-        'encoder_train_itr': 5,
+        'encoder_train_itr': 10,
         'num_conseq_rand_act': 10,
         'num_random_samples': 5,
         'p_rand': 0.5,                  # p(random action during rollout)

@@ -116,7 +116,7 @@ class Agent(object):
 
     def init_encoder(self, batch_size, num_samples, loss_threshold):
         threshold_met, i = False, 0
-        while not threshold_met and i < 500:
+        while not threshold_met and i < 1000:
             enc_obs, act_n, _, _, enc_n_obs, _  = self.sample_env(batch_size, num_samples, shuffle=True, algorithm='random')
             for b_eobs, b_acts, b_enobs in zip(enc_obs, act_n, enc_n_obs):
                 for _ in range(self.encoder_train_itr):
@@ -148,7 +148,7 @@ class Agent(object):
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
         
         # if encoder becomes in accurate then fine tune on new samples
-        last_enc_loss = self.encoder.get_loss(b_eobs, b_enobs, b_acts)
-        if (np.mean(last_enc_loss) > encoder_loss_thresh):
-            self.train_enc_next_itr = True
-            print('Updating Encoder....')
+        # last_enc_loss = self.encoder.get_loss(b_eobs, b_enobs, b_acts)
+        # if (np.mean(last_enc_loss) > encoder_loss_thresh):
+        #     self.train_enc_next_itr = True
+        #     print('Updating Encoder....')

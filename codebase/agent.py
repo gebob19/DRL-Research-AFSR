@@ -64,7 +64,7 @@ class Agent(object):
                 act = self.env.action_space.sample()
 
             n_obs, rew, done, info = self.env.step(act)
-            # int_rew = self.rnd.get_rewards(enc_ob)[0]
+            int_rew = self.rnd.get_rewards(enc_ob)[0]
             
             # dont record when agent dies
             # if info['ale.lives'] != n_lives:
@@ -72,7 +72,7 @@ class Agent(object):
             # if ignore > 0: ignore -= 1
             # else:
             obs_n.append(obs); ext_rew_n.append(rew); n_obs_n.append(n_obs)
-            act_n.append(act); dones_n.append(done); int_rew_n.append(1)
+            act_n.append(act); dones_n.append(done); int_rew_n.append(int_rew)
             if done:
                 obs = self.env.reset()
                 done = True
@@ -84,7 +84,8 @@ class Agent(object):
         # ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
         enc_obs, enc_n_obs = self.norm(enc_obs), self.norm(enc_n_obs)
-        int_rew_n = self.norm(int_rew_n)
+        int_rew_n = self.norm(int_rew_n) * 10e2
+        ext_rew_n = np.asarray(ext_rew_n) * 10
 
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
         return self.batch(enc_obs, act_n, ext_rew_n, int_rew_n, enc_n_obs, dones_n, batch_size, shuffle)

@@ -52,11 +52,11 @@ if __name__ == '__main__':
     logger = Logger(max_size=100000)
 
     if use_encoder:
-        encoder = Encoder(encoder_args)
-        obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
-        policy = PPO(policy_graph_args, adv_args, obs_encoded_shape)
-        rnd = RND(obs_encoded_shape, rnd_args)
-        agent = Agent(env, policy, encoder, rnd, replay_buffer, logger, agent_args)
+        # encoder = Encoder(encoder_args)
+        # obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
+        policy = PPO(policy_graph_args, adv_args, (None, 84, 84, 1))
+        rnd = RND((None, 84, 84, 1), rnd_args)
+        agent = Agent(env, policy, None, rnd, replay_buffer, logger, agent_args)
     else:
         policy = PPO(policy_graph_args, adv_args, (None, 84, 84, 1))
         rnd = RND((None, 84, 84, 1), rnd_args)
@@ -79,7 +79,7 @@ if __name__ == '__main__':
             try:
                 if use_encoder:
                     print('training encoder...')
-                    agent.init_encoder(batch_size, num_samples, init_enc_threshold)
+                    # agent.init_encoder(batch_size, num_samples, init_enc_threshold)
                 print('starting training...')
                 for itr in range(n_iter):
                     start = time.time()
@@ -102,16 +102,18 @@ if __name__ == '__main__':
                 except (ValueError, TypeError):
                     act = 20
                 if act == 0:
-                    if use_encoder:
-                        obs = encoder.get_encoding([obs])
-                    else:
-                        obs = [obs]
+                    # if use_encoder:
+                    #     pass
+                    #     # obs = encoder.get_encoding([obs])
+                    # else:
+                    obs = [obs]
                     act = policy.get_best_action(obs)
                 elif act not in range(17):
-                    if use_encoder:
-                        obs = encoder.get_encoding([obs])
-                    else:
-                        obs = [obs]
+                    # if use_encoder:
+                    #     pass
+                    #     # obs = encoder.get_encoding([obs])
+                    # else:
+                    obs = [obs]
                     act = policy.sample(obs)
                     # act = policy.get_best_action(enc_ob)
                     

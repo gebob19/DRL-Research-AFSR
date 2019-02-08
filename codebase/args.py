@@ -4,14 +4,17 @@ import tensorflow as tf
 def get_args(env, test_run=False):
     
     policy_graph_args = {
-        'ob_dim': env.observation_space.shape,
         'act_dim': env.action_space.n - 1,
         'clip_range': 0.2,
         'n_hidden': 3,
         'hid_size': 64,
+        'conv_depth': 4,
         'learning_rate': 1e-4,
         'num_target_updates': 10,
-        'num_grad_steps_per_target_update': 5
+        'num_grad_steps_per_target_update': 5,
+        'actnn_layers': 1,
+        'actnn_units': 128,
+        'actnn_learning_rate': 1e-6,
     }
 
     adv_args = {

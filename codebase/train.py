@@ -18,23 +18,23 @@ from args import get_args
 
 if __name__ == '__main__':
     env = make_env('Breakout-v0', 84, 84)
-    n_iter = 613
+    n_iter = 250
     num_samples = 256
-    batch_size = 32
-    enc_threshold = 2.5
-    init_enc_threshold = 1.0 
-    use_encoder = 1
+    batch_size = 64
+    enc_threshold = 1.7
+    init_enc_threshold = 0.5
+    use_encoder = 0
     if use_encoder:
-        model_name = 'enc-mult-rew'
+        model_name = 'enc-mult-all-rew-initonly'
     else:
-        model_name = 'no-enc'
+        model_name = 'no-enc-mult-all-rew'
     
     train = 1
     restore = 0
     save = 1
     
-    test_run = 1
-    view = 0
+    test_run = 0
+    view = 1
 
     if view:
         train = False
@@ -97,6 +97,7 @@ if __name__ == '__main__':
             obs = env.reset()
             while True:
                 env.render()
+                act = env.action_space.sample()
                 try:
                     act = int(input('Press a key to continue...'))
                 except (ValueError, TypeError):

@@ -131,10 +131,10 @@ class Agent(object):
         enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.get_data(batch_size, num_samples, itr)
         for b_eobs, b_acts, b_erew, b_irew, b_enobs, b_dones in zip(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n):
             
-            if self.train_enc_next_itr:
-                for _ in range(self.encoder_train_itr):
-                    enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
-                    self.logger.log('encoder', ['loss'], [np.mean(enc_loss)])
+            # if self.train_enc_next_itr:
+            #     for _ in range(self.encoder_train_itr):
+            #         enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
+            #         self.logger.log('encoder', ['loss'], [np.mean(enc_loss)])
 
             rnd_loss = self.rnd.train(b_eobs)
             # 1 critic temp soln

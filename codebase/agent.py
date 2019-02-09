@@ -18,6 +18,7 @@ class Agent(object):
         self.rnd_train_itr = args['rnd_train_itr']
         self.encoder_train_itr = args['encoder_train_itr']
         self.encoder_update_freq = args['encoder_update_freq']
+        self.encoder_updates = args['encoder_updates']
 
         self.num_conseq_rand_act = args['num_conseq_rand_act']
         self.num_random_samples = args['num_random_samples']
@@ -64,8 +65,7 @@ class Agent(object):
                 act = self.env.action_space.sample()
 
             n_obs, rew, done, info = self.env.step(act)
-            int_rew = self.rnd.get_rewards(enc_ob)[0]
-            
+            int_rew = self.rnd.get_rewards([obs])[0]
             # dont record when agent dies
             # if info['ale.lives'] != n_lives:
             #     ignore = 18; n_lives -= 1
@@ -84,8 +84,8 @@ class Agent(object):
         # ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
         obs, n_obs = self.norm(obs_n), self.norm(n_obs_n)
-        int_rew_n = self.norm(int_rew_n) * 10e2
-        ext_rew_n = np.array(ext_rew_n) * 10
+        int_rew_n = self.norm(int_rew_n) * 10
+        ext_rew_n = np.array(ext_rew_n)
 
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
         return self.batch(obs, act_n, ext_rew_n, int_rew_n, n_obs, dones_n, batch_size, shuffle)
@@ -114,18 +114,18 @@ class Agent(object):
         # else:
         #     return self.replay_buffer.get_all(batch_size, master=True, shuffle=True, size=num_samples)
 
-    # def init_encoder(self, batch_size, num_samples, loss_threshold):
-    #     threshold_met, i = False, 0
-    #     while not threshold_met and i < 1000:
-    #         enc_obs, act_n, _, _, enc_n_obs, _  = self.sample_env(batch_size, num_samples, shuffle=True, algorithm='random')
-    #         for b_eobs, b_acts, b_enobs in zip(enc_obs, act_n, enc_n_obs):
-    #             for _ in range(self.encoder_train_itr):
-    #                 enc_loss = self.encoder.train(b_eobs, b_enobs, b_acts)
-    #                 self.logger.log('encoder', ['loss'], [np.mean(enc_loss)])
-    #                 if np.mean(enc_loss) < loss_threshold: threshold_met = True
-    #                 i += 1
-    #     if threshold_met: print('Encoder init threshold was met...')
-    #     else: print('Encoder init threshold was NOT met...')
+    def init_encoder(self, batch_size, num_samples, loss_threshold):
+        threshold_met, i = False, 0
+        while not threshold_met and i < 1000:
+            enc_obs, act_n, _, _, enc_n_obs, _  = self.sample_env(batch_size, num_samples, shuffle=True, algorithm='random')
+            for b_eobs, b_acts, b_enobs in zip(enc_obs, act_n, enc_n_obs):
+                for _ in range(self.encoder_train_itr):
+                    enc_loss = self.policy.train_acthead(b_eobs, b_enobs, b_acts)
+                    self.logger.log('encoder', ['loss'], [np.mean(enc_loss)])
+                    if np.mean(enc_loss) < loss_threshold: threshold_met = True
+                    i += 1
+        if threshold_met: print('Encoder init threshold was met...')
+        else: print('Encoder init threshold was NOT met...')
     
     def train(self, batch_size, num_samples, encoder_loss_thresh, itr):
         enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.get_data(batch_size, num_samples, itr)
@@ -143,12 +143,14 @@ class Agent(object):
             critic_loss = self.policy.train_critic(b_eobs, b_enobs, total_r, b_dones)
             adv = self.policy.estimate_adv(b_eobs, total_r, b_enobs, b_dones)
             actor_loss = self.policy.train_actor(b_eobs, b_acts, adv)
-            enc_loss = self.policy.train_acthead(b_eobs, b_enobs, b_acts)
+            # if itr < self.encoder_updates:
+            #     enc_loss = self.policy.train_acthead(b_eobs, b_enobs, b_acts)
            
             if itr % self.log_rate == 0:
                 self.logger.log('density', ['loss'], [rnd_loss])
                 self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
-                self.logger.log('encoder', ['loss'], [enc_loss])
+                # if itr < self.encoder_updates:
+                #     self.logger.log('encoder', ['loss'], [enc_loss])
         
         # if encoder becomes in accurate then fine tune on new samples
         # last_enc_loss = self.encoder.get_loss(b_eobs, b_enobs, b_acts)

@@ -119,10 +119,6 @@ class PPO(object):
                                     feed_dict={self.obs: obs, self.v_target: y})
         return loss
 
-    def get_first_half(self, obs):
-        return self.sess.run(self.half_policy_distrib, feed_dict={
-            self.obs: obs
-        })
 
     def train_acthead(self, obs_n, n_obs_n, act_n):
         loss, _ = self.sess.run([self.loss, self.train_step], feed_dict={

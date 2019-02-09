@@ -74,8 +74,8 @@ class NoEncoderAgent(object):
                 i += 1
 
         obs_n, n_obs_n = self.norm_clip(obs_n), self.norm_clip(n_obs_n)
-        ext_rew_n = np.clip(ext_rew_n, -1, 1)
-        int_rew_n = self.norm(int_rew_n)
+        int_rew_n = self.norm(int_rew_n) * 10e2
+        ext_rew_n = np.asarray(ext_rew_n) * 10
 
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
         return self.batch(obs_n, act_n, ext_rew_n, int_rew_n, n_obs_n, dones_n, batch_size, shuffle)

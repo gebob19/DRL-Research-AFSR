@@ -12,8 +12,8 @@ def get_args(env, test_run=False):
         'learning_rate': 1e-4,
         'num_target_updates': 10,
         'num_grad_steps_per_target_update': 5,
-        'actnn_layers': 1,
-        'actnn_units': 128,
+        'actnn_layers': 4,
+        'actnn_units': 64,
         'actnn_learning_rate': 1e-6,
     }
 
@@ -59,12 +59,13 @@ def get_args(env, test_run=False):
     agent_args = {
         'rnd_train_itr': 1,
         'encoder_update_freq': 10,
-        'encoder_train_itr': 10,
+        'encoder_train_itr': 1,
         'num_conseq_rand_act': 10,
         'num_random_samples': 5,
         'p_rand': 0.5,                  # p(random action during rollout)
         'algorithm_rollout_rate': 2,
         'log_rate': 1,
+        'encoder_updates': 100
     }
 
     if test_run:

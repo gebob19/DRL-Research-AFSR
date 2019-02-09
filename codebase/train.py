@@ -18,14 +18,14 @@ from args import get_args
 
 if __name__ == '__main__':
     env = make_env('Breakout-v0', 84, 84)
-    n_iter = 250
+    n_iter = 1000
     num_samples = 256
     batch_size = 64
     enc_threshold = 1.7
-    init_enc_threshold = 0.5
-    use_encoder = 0
+    init_enc_threshold = 0.3
+    use_encoder = 1
     if use_encoder:
-        model_name = 'enc-mult-all-rew-initonly'
+        model_name = 'enc-in-policy-init-bb-1000itr'
     else:
         model_name = 'no-enc-mult-all-rew'
     
@@ -79,7 +79,7 @@ if __name__ == '__main__':
             try:
                 if use_encoder:
                     print('training encoder...')
-                    # agent.init_encoder(batch_size, num_samples, init_enc_threshold)
+                    agent.init_encoder(batch_size, num_samples, init_enc_threshold)
                 print('starting training...')
                 for itr in range(n_iter):
                     start = time.time()

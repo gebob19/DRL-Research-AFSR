@@ -33,9 +33,9 @@ if __name__ == '__main__':
     restore = 0
     save = 1
     
-    test_run = 0
-    view = 1
-
+    test_run = 1
+    view = 0 
+    
     if view:
         train = False
         restore = True
@@ -69,6 +69,7 @@ if __name__ == '__main__':
     saver = tf.train.Saver()
 
     with tf.Session(config=tf_config) as sess:
+        writer = tf.summary.FileWriter('./tf_logs')
         sess.run(tf.global_variables_initializer())
         agent.set_session(sess)
         if restore: 
@@ -83,13 +84,14 @@ if __name__ == '__main__':
                 print('starting training...')
                 for itr in range(n_iter):
                     start = time.time()
-                    agent.train(batch_size, num_samples, enc_threshold, itr)
+                    agent.train(batch_size, num_samples, enc_threshold, itr, writer)
                     end = time.time()
                     print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
                     print('size of logger:{}, size of buf:{}'.format(logger.size, len(replay_buffer.master_replay)))
 
             finally: # safe exit sooner
                 if save:
+                    writer.close()
                     logger.export()
                     saver.save(sess, "./model_data/model-{}.ckpt".format(model_name))
         

@@ -116,7 +116,7 @@ class Agent(object):
 
     def init_encoder(self, batch_size, num_samples, loss_threshold):
         threshold_met, i = False, 0
-        while not threshold_met and i < 1000:
+        while not threshold_met and i < 1:
             enc_obs, act_n, _, _, enc_n_obs, _  = self.sample_env(batch_size, num_samples, shuffle=True, algorithm='random')
             for b_eobs, b_acts, b_enobs in zip(enc_obs, act_n, enc_n_obs):
                 for _ in range(self.encoder_train_itr):
@@ -127,7 +127,7 @@ class Agent(object):
         if threshold_met: print('Encoder init threshold was met...')
         else: print('Encoder init threshold was NOT met...')
     
-    def train(self, batch_size, num_samples, encoder_loss_thresh, itr):
+    def train(self, batch_size, num_samples, encoder_loss_thresh, itr, writer):
         enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.get_data(batch_size, num_samples, itr)
         for b_eobs, b_acts, b_erew, b_irew, b_enobs, b_dones in zip(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n):
             
@@ -142,7 +142,8 @@ class Agent(object):
             # 1 critic temp soln
             critic_loss = self.policy.train_critic(b_eobs, b_enobs, total_r, b_dones)
             adv = self.policy.estimate_adv(b_eobs, total_r, b_enobs, b_dones)
-            actor_loss = self.policy.train_actor(b_eobs, b_acts, adv)
+            actor_loss, summ = self.policy.train_actor(b_eobs, b_acts, adv)
+            writer.add_summary(summ, itr)
             # if itr < self.encoder_updates:
             #     enc_loss = self.policy.train_acthead(b_eobs, b_enobs, b_acts)
            

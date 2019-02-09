@@ -42,7 +42,14 @@ class PPO(object):
         action_enc = tf.one_hot(self.act, depth=self.act_dim)
         self.logprob = -1 * tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy_distrib, labels=action_enc)
         self.actor_loss = -tf.reduce_mean(self.logprob * self.adv - 1e-3 * self.logprob)
-        self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.actor_loss)
+        actor_optim =  tf.train.AdamOptimizer(self.learning_rate)
+        self.grads = actor_optim.compute_gradients(self.actor_loss)
+        for grad in self.grads:
+            tf.summary.histogram("{}-grad".format(grad[1].name), grad)
+
+        self.merged = tf.summary.merge_all()
+
+        self.actor_update_op = actor_optim.minimize(self.actor_loss)
         
         # critic definition with encoded state
         self.v_target = tf.placeholder(shape=(None,), name='v_target', dtype=tf.float32)
@@ -103,12 +110,12 @@ class PPO(object):
         return adv
     
     def train_actor(self, obs, act, adv):
-        loss, _ = self.sess.run([self.actor_loss, self.actor_update_op], feed_dict={
+        loss, _, merged = self.sess.run([self.actor_loss, self.actor_update_op, self.merged], feed_dict={
             self.obs: obs,
             self.act: act,
             self.adv: adv
         })
-        return loss
+        return loss, merged
         
     def train_critic(self, obs, nxt_obs, rew, dones):
         for i in range(self.num_grad_steps_per_target_update * self.num_target_updates):

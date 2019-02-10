@@ -85,7 +85,7 @@ class Agent(object):
 
         obs, n_obs = self.norm(obs_n), self.norm(n_obs_n)
         int_rew_n = self.norm(int_rew_n) * 10
-        ext_rew_n = np.array(ext_rew_n)
+        ext_rew_n = np.array(ext_rew_n) 
 
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
         return self.batch(obs, act_n, ext_rew_n, int_rew_n, n_obs, dones_n, batch_size, shuffle)
@@ -107,8 +107,8 @@ class Agent(object):
         return (r - np.mean(r)) / (np.var(np.array(r)) + 1e-6)
         
     def get_data(self, batch_size, num_samples, itr):
-        # if itr < self.num_random_samples:
-        #     return self.sample_env(batch_size, num_samples, shuffle=True, action_selection='random')
+        if itr < self.num_random_samples:
+            return self.sample_env(batch_size, num_samples, shuffle=True, algorithm='random')
         # if itr % self.algorithm_rollout_rate == 0:
         return self.sample_env(batch_size, num_samples, shuffle=True)
         # else:
@@ -116,7 +116,7 @@ class Agent(object):
 
     def init_encoder(self, batch_size, num_samples, loss_threshold):
         threshold_met, i = False, 0
-        while not threshold_met and i < 1:
+        while not threshold_met and i < 1000:
             enc_obs, act_n, _, _, enc_n_obs, _  = self.sample_env(batch_size, num_samples, shuffle=True, algorithm='random')
             for b_eobs, b_acts, b_enobs in zip(enc_obs, act_n, enc_n_obs):
                 for _ in range(self.encoder_train_itr):
@@ -137,6 +137,7 @@ class Agent(object):
             #         self.logger.log('encoder', ['loss'], [np.mean(enc_loss)])
 
             rnd_loss = self.rnd.train(b_eobs)
+            
 
             total_r = b_erew + b_irew
             # 1 critic temp soln

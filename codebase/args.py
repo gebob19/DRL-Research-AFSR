@@ -61,7 +61,7 @@ def get_args(env, test_run=False):
         'encoder_update_freq': 10,
         'encoder_train_itr': 1,
         'num_conseq_rand_act': 10,
-        'num_random_samples': 5,
+        'num_random_samples': 20,
         'p_rand': 0.5,                  # p(random action during rollout)
         'algorithm_rollout_rate': 2,
         'log_rate': 1,

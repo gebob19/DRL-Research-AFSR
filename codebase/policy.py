@@ -41,7 +41,7 @@ class PPO(object):
         # policy update
         action_enc = tf.one_hot(self.act, depth=self.act_dim)
         self.logprob = -1 * tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy_distrib, labels=action_enc)
-        self.actor_loss = -tf.reduce_mean(self.logprob * self.adv - 1e-3 * self.logprob)
+        self.actor_loss = -tf.reduce_mean(self.logprob * self.adv - 2e-1 * self.logprob)
         actor_optim =  tf.train.AdamOptimizer(self.learning_rate)
         self.grads = actor_optim.compute_gradients(self.actor_loss)
         for grad in self.grads:

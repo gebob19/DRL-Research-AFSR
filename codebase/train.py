@@ -18,14 +18,14 @@ from args import get_args
 
 if __name__ == '__main__':
     env = make_env('Breakout-v0', 84, 84)
-    n_iter = 1000
+    n_iter = 250
     num_samples = 256
-    batch_size = 64
+    batch_size = 32
     enc_threshold = 1.7
     init_enc_threshold = 0.3
-    use_encoder = 1
+    use_encoder = 0
     if use_encoder:
-        model_name = 'enc-in-policy-init-bb-1000itr'
+        model_name = 'enc-in-policy-init-withrandom-multrew-inc-entrp'
     else:
         model_name = 'no-enc-mult-all-rew'
     
@@ -33,8 +33,8 @@ if __name__ == '__main__':
     restore = 0
     save = 1
     
-    test_run = 1
-    view = 0 
+    test_run = 0
+    view = 1
     
     if view:
         train = False

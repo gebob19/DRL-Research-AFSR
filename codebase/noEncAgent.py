@@ -78,7 +78,7 @@ class NoEncoderAgent(object):
         # ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
         obs, n_obs = self.norm(obs_n), self.norm(n_obs_n)
-        int_rew_n = self.norm(int_rew_n) 
+        int_rew_n = self.norm(int_rew_n) * 10 
         ext_rew_n = np.array(ext_rew_n) 
 
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])

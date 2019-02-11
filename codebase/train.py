@@ -26,7 +26,7 @@ if __name__ == '__main__':
     use_encoder = 0
 
     if use_encoder:
-        model_name = 'enc-init-policy-base-mr'
+        model_name = 'enc-base-mr'
     else:
         model_name = 'no-enc-base-mr'
     
@@ -47,6 +47,11 @@ if __name__ == '__main__':
         batch_size = 8
         save = False
         restore = False
+
+    if save or restore  or test_run:
+        directory = "./model_{}".format(model_name)
+        if not os.path.exists(directory):
+            os.mkdir(directory)
 
     policy_graph_args, adv_args, encoder_args, rnd_args, agent_args = get_args(env, test_run=test_run)
     replay_buffer = MasterBuffer(max_size=5000)
@@ -70,7 +75,7 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         agent.set_session(sess)
         if restore: 
-            saver.restore(sess, "./model_data/model-{}.ckpt".format(model_name))
+            saver.restore(sess, "./model_{}/model.ckpt".format(model_name))
             agent.num_random_samples = 5
 
         if train:
@@ -93,7 +98,7 @@ if __name__ == '__main__':
                 if save:
                     writer.close()
                     logger.export()
-                    saver.save(sess, "./model_data/model-{}.ckpt".format(model_name))
+                    saver.save(sess, "./model_{}/model.ckpt".format(model_name))
         
         if view: # view
             obs = env.reset()

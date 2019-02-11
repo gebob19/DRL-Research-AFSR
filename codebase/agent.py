@@ -22,7 +22,6 @@ class Agent(object):
         # Args
         self.rnd_train_itr = args['rnd_train_itr']
         self.use_encoder = args['use_encoder']
-        self.encoder_train_itr = args['encoder_train_itr']
         self.encoder_train_limit = args['encoder_train_limit']
 
         self.num_random_samples = args['num_random_samples']
@@ -107,7 +106,7 @@ class Agent(object):
 
         while not threshold_met and i < self.encoder_train_limit:
             raw_enc_obs, raw_act_n, raw_ext_rew_n, raw_int_rew, raw_enc_n_obs, raw_dones_n  = self.sample_env(batch_size, num_samples, shuffle=True, algorithm='random')
-            for _ in range(self.encoder_train_itr):
+            for _ in range(4):
                 enc_obs, act_n, _, _, enc_n_obs, _ = self.batch(raw_enc_obs, raw_act_n, raw_ext_rew_n, raw_int_rew, raw_enc_n_obs, raw_dones_n, batch_size, shuffle=True)
                 for b_eobs, b_acts, b_enobs in zip(enc_obs, act_n, enc_n_obs):
 

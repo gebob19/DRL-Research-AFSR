@@ -12,7 +12,6 @@ from policy import PPO
 from novelty import Encoder, RND
 from dynamics import DynamicsModel
 from agent import Agent
-from noEncAgent import NoEncoderAgent
 from args import get_args 
 
 

@@ -19,11 +19,12 @@ from args import get_args
 if __name__ == '__main__':
     env = make_env('MontezumaRevenge-v0', 84, 84)
     n_iter = 500
-    num_samples = 5000
+    num_samples = 8000
     batch_size = 32
-    enc_threshold = 1.7
-    init_enc_threshold = 1.2
-    use_encoder = 1
+    enc_threshold = 1.0
+    init_enc_threshold = 0.5
+    use_encoder = 0
+
     if use_encoder:
         model_name = 'enc-init-policy-base-mr'
     else:
@@ -33,7 +34,7 @@ if __name__ == '__main__':
     restore = 0
     save = 1
     
-    test_run = 1
+    test_run = 0
     view = 0
     
     if view:

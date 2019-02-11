@@ -76,7 +76,7 @@ class Encoder(object):
     
     def train(self, obs_n, n_obs_n, act_n):
         # encode into action classes
-        # enc_act_n = self.encode_actions(act_n) 
+        enc_act_n = self.encode_actions(act_n) 
         # update
         loss, _ = self.sess.run([self.loss, self.train_step], feed_dict={
             self.prev_act_ph: act_n,
@@ -87,7 +87,7 @@ class Encoder(object):
 
     def get_loss(self, obs_n, n_obs_n, act_n):
         # encode into action classes
-        # enc_act_n = self.encode_actions(act_n) 
+        enc_act_n = self.encode_actions(act_n) 
         return self.sess.run(self.loss, feed_dict={
             self.prev_act_ph: act_n,
             self.actnn_prev_obs_ph: obs_n,

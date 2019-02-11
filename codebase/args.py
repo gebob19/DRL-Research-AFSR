@@ -15,6 +15,7 @@ def get_args(env, test_run=False):
         'actnn_layers': 4,
         'actnn_units': 64,
         'actnn_learning_rate': 1e-6,
+        'actnn_nclasses': 5
     }
 
     adv_args = {
@@ -23,7 +24,7 @@ def get_args(env, test_run=False):
 
     encoder_args = {
         'obs_dim': env.observation_space.shape,
-        'act_dim': env.action_space.n - 1, # number of action classes
+        'act_dim': 5, # number of action classes
         'n_layers_frozen': 10,
         'act_layer_extract': 30,
         'learning_rate': 1e-6,

@@ -17,6 +17,7 @@ class PPO(object):
         self.num_grad_steps_per_target_update = graph_args['num_grad_steps_per_target_update']
         
         self.gamma = adv_args['gamma']
+        self.setup_action_classes()
 
         self.act, self.adv = self.define_placeholders()
         self.obs = tf.placeholder(shape=in_shape, dtype=tf.float32)
@@ -41,7 +42,7 @@ class PPO(object):
         # policy update
         action_enc = tf.one_hot(self.act, depth=self.act_dim)
         self.logprob = -1 * tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy_distrib, labels=action_enc)
-        self.actor_loss = -tf.reduce_mean(self.logprob * self.adv - 2e-1 * self.logprob)
+        self.actor_loss = -tf.reduce_mean(self.logprob * self.adv - 1e-3 * self.logprob)
         actor_optim =  tf.train.AdamOptimizer(self.learning_rate)
         self.grads = actor_optim.compute_gradients(self.actor_loss)
         for grad in self.grads:
@@ -62,6 +63,7 @@ class PPO(object):
         actnn_layers = graph_args['actnn_layers']
         actnn_units = graph_args['actnn_units']
         self.actnn_learning_rate = graph_args['actnn_learning_rate']
+        self.nclasses = graph_args['actnn_nclasses']
 
         self.prev_act_ph = tf.placeholder(shape=(None,), dtype=tf.int32) 
         self.actnn_prev_obs_ph = self.half_policy_distrib
@@ -70,7 +72,9 @@ class PPO(object):
         multi_obs_enc = tf.concat([self.actnn_prev_obs_ph, self.actnn_obs_ph], axis=-1)
         self.actnn_pred = dense_pass(multi_obs_enc, self.act_dim, actnn_layers, actnn_units)
         
-        action_enc = tf.one_hot(self.prev_act_ph, depth=self.act_dim)
+        # action_enc = tf.one_hot(self.prev_act_ph, depth=self.nclasses)
+        action_enc = tf.one_hot(self.act_dim, depth=self.nclasses)
+
         self.loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.actnn_pred, labels=action_enc)
         self.train_step = tf.train.AdamOptimizer(self.actnn_learning_rate).minimize(self.loss)
         
@@ -134,6 +138,29 @@ class PPO(object):
             self.n_obs: n_obs_n
         })
         return loss
+
+    def setup_action_classes(self):
+        self.classes =  {
+            '4': 0,  # look left action group = 0
+            '7': 0,
+            '9': 0,
+            '12': 0,
+            '15': 0,
+            '17': 0,
+            '3': 1,   # look right action group = 1
+            '6': 1,
+            '8': 1,
+            '11': 1,
+            '14': 1,
+            '16': 1,
+            '1': 2,    #  jump up action group = 2
+            '10': 2,
+            '2': 3,     # up / down action group = 3
+            '5': 3,
+            '13': 3,
+            '0': 4,     #  do nothing action  group = 4
+        }
+
 
 def dense_pass(x, out_size, num_layers, units, output_activation=None):
     x = tf.layers.flatten(x)

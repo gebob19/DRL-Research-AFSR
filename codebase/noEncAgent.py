@@ -51,7 +51,7 @@ class NoEncoderAgent(object):
         
         # policy rollout
         obs = self.env.reset()
-        while i < num_samples or (not done and i < (100 + num_samples)):
+        while i < num_samples or (not done and i < (2 * num_samples)):
             # enc_ob = self.encoder.get_encoding([obs])
             if algorithm == 'algorithm':
                 act = self.policy.sample([obs])
@@ -78,11 +78,14 @@ class NoEncoderAgent(object):
         # ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
         obs, n_obs = self.norm(obs_n), self.norm(n_obs_n)
-        int_rew_n = self.norm(int_rew_n) * 10 
+        int_rew_n = self.norm(int_rew_n)
         ext_rew_n = np.array(ext_rew_n) 
+        
+        if max(ext_rew_n) > 0:
+            return None # throw an error to end
 
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
-        return self.batch(obs, act_n, ext_rew_n, int_rew_n, n_obs, dones_n, batch_size, shuffle)
+        return obs, act_n, ext_rew_n, int_rew_n, n_obs, dones_n
         
         # sync logger work
         # obs_n, act_n, rew_n = self.replay_buffer.get_logger_work()
@@ -110,20 +113,24 @@ class NoEncoderAgent(object):
 
     
     def train(self, batch_size, num_samples, encoder_loss_thresh, itr, writer):
-        enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.get_data(batch_size, num_samples, itr)
-        for b_eobs, b_acts, b_erew, b_irew, b_enobs, b_dones in zip(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n):
-            rnd_loss = self.rnd.train(b_eobs)
+        raw_enc_obs, raw_act_n, raw_ext_rew_n, raw_int_rew, raw_enc_n_obs, raw_dones_n = self.get_data(batch_size, num_samples, itr)
+
+        for _ in range(4):
+            enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n = self.batch(raw_enc_obs, raw_act_n, raw_ext_rew_n, raw_int_rew, raw_enc_n_obs, raw_dones_n, batch_size, shuffle=True)
+            for b_eobs, b_acts, b_erew, b_irew, b_enobs, b_dones in zip(enc_obs, act_n, ext_rew_n, int_rew, enc_n_obs, dones_n):
+                
+                
+                rnd_loss = self.rnd.train(b_eobs)
+                
+
+                total_r = b_erew + b_irew
+                # 1 critic temp soln
+                critic_loss = self.policy.train_critic(b_eobs, b_enobs, total_r, b_dones)
+                adv = self.policy.estimate_adv(b_eobs, total_r, b_enobs, b_dones)
+                actor_loss, summ = self.policy.train_actor(b_eobs, b_acts, adv)
+                writer.add_summary(summ, itr)
             
-            total_r = b_erew + b_irew
-            # 1 critic temp soln
-            critic_loss = self.policy.train_critic(b_eobs, b_enobs, total_r, b_dones)
-            adv = self.policy.estimate_adv(b_eobs, total_r, b_enobs, b_dones)
-            actor_loss, summ = self.policy.train_actor(b_eobs, b_acts, adv)
-            writer.add_summary(summ, itr)
-            # if itr < self.encoder_updates:
-            #     enc_loss = self.policy.train_acthead(b_eobs, b_enobs, b_acts)
-           
-            if itr % self.log_rate == 0:
-                self.logger.log('density', ['loss'], [rnd_loss])
-                self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
+                if itr % self.log_rate == 0:
+                    self.logger.log('density', ['loss'], [rnd_loss])
+                    self.logger.log('policy', ['actor_loss', 'critic_loss'], [actor_loss, critic_loss])
 

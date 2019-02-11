@@ -17,24 +17,24 @@ from args import get_args
 
 
 if __name__ == '__main__':
-    env = make_env('Breakout-v0', 84, 84)
-    n_iter = 2000
-    num_samples = 256
+    env = make_env('MontezumaRevenge-v0', 84, 84)
+    n_iter = 500
+    num_samples = 128
     batch_size = 32
     enc_threshold = 1.7
-    init_enc_threshold = 0.3
+    init_enc_threshold = 0.2
     use_encoder = 0
     if use_encoder:
-        model_name = 'enc-in-policy-init-withrandom-multrew-inc-entrp'
+        model_name = 'enc-init-policy-base-mr'
     else:
-        model_name = 'no-enc-base'
+        model_name = 'no-enc-base-mr'
     
     train = 1
     restore = 0
     save = 1
     
     test_run = 0
-    view = 0
+    view = 1
     
     if view:
         train = False

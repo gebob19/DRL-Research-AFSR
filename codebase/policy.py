@@ -28,14 +28,11 @@ class PPO(object):
             hid_size, conv_depth)
         self.half_policy_distrib_2 = Network(self.n_obs, None, 'policy_start', \
             hid_size, conv_depth, reuse=True)
-
         self.policy_distrib = Network(self.half_policy_distrib, self.act_dim,  \
             'policy_out', hid_size, n_hidden_dense=n_hidden)
 
         self.greedy_action = tf.argmax(self.policy_distrib, axis=1)
 
-        # U = tf.random_uniform(tf.shape(self.policy_distrib), minval = 0, maxval = 1)
-        # self.sample_action = tf.argmax(self.policy_distrib - tf.log(-tf.log(U)), axis=1)
         self.n_act_sample = 1
         self.sample_action = tf.random.multinomial(tf.nn.softmax(self.policy_distrib), self.n_act_sample)
         
@@ -44,13 +41,13 @@ class PPO(object):
         self.logprob = -1 * tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy_distrib, labels=action_enc)
         self.actor_loss = -tf.reduce_mean(self.logprob * self.adv - 1e-3 * self.logprob)
         actor_optim =  tf.train.AdamOptimizer(self.learning_rate)
+        self.actor_update_op = actor_optim.minimize(self.actor_loss)
+
+        # record gradients
         self.grads = actor_optim.compute_gradients(self.actor_loss)
         for grad in self.grads:
             tf.summary.histogram("{}-grad".format(grad[1].name), grad)
-
         self.merged = tf.summary.merge_all()
-
-        self.actor_update_op = actor_optim.minimize(self.actor_loss)
         
         # critic definition with encoded state
         self.v_target = tf.placeholder(shape=(None,), name='v_target', dtype=tf.float32)
@@ -59,22 +56,22 @@ class PPO(object):
         self.critic_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.critic_loss)
 
         # action neural network def
-        # act_i-1, obs_i-1, obs_i placeholders
         actnn_layers = graph_args['actnn_layers']
         actnn_units = graph_args['actnn_units']
         self.actnn_learning_rate = graph_args['actnn_learning_rate']
         self.nclasses = graph_args['actnn_nclasses']
 
+        # placeholders act_i-1, obs_i-1, obs_i
         self.prev_act_ph = tf.placeholder(shape=(None,), dtype=tf.int32) 
         self.actnn_prev_obs_ph = self.half_policy_distrib
         self.actnn_obs_ph = self.half_policy_distrib_2
+        
         # concat & network pass
         multi_obs_enc = tf.concat([self.actnn_prev_obs_ph, self.actnn_obs_ph], axis=-1)
-        self.actnn_pred = dense_pass(multi_obs_enc, self.act_dim, actnn_layers, actnn_units)
+        self.actnn_pred = dense_pass(multi_obs_enc, self.nclasses, actnn_layers, actnn_units)
+        action_enc = tf.one_hot(self.prev_act_ph, depth=self.nclasses)
         
-        # action_enc = tf.one_hot(self.prev_act_ph, depth=self.nclasses)
-        action_enc = tf.one_hot(self.act_dim, depth=self.nclasses)
-
+        # update operations
         self.loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.actnn_pred, labels=action_enc)
         self.train_step = tf.train.AdamOptimizer(self.actnn_learning_rate).minimize(self.loss)
         
@@ -87,14 +84,12 @@ class PPO(object):
         return act, adv
 
     def sample(self, enc_obs):
-        # obs must be shape (1, ob_dim)
         self.n_act_sample = len(enc_obs)
         return self.sess.run(self.sample_action, feed_dict={
             self.obs: enc_obs
         })[0][0]
         
     def get_best_action(self, enc_obs):
-        # obs must be shape (1, ob_dim)
         return self.sess.run(self.greedy_action, feed_dict={
             self.obs: enc_obs
         })[0]
@@ -132,12 +127,27 @@ class PPO(object):
 
 
     def train_acthead(self, obs_n, n_obs_n, act_n):
+        enc_act_n = self.encode_actions(act_n)
         loss, _ = self.sess.run([self.loss, self.train_step], feed_dict={
-            self.prev_act_ph: act_n,
+            self.prev_act_ph: enc_act_n,
             self.obs: obs_n,
             self.n_obs: n_obs_n
         })
         return loss
+
+    def actnn_loss(self, obs_n, n_obs_n, act_n):
+        enc_act_n = self.encode_actions(act_n)
+        return self.sess.run(self.loss, feed_dict={
+            self.prev_act_ph: enc_act_n,
+            self.obs: obs_n,
+            self.n_obs: n_obs_n
+        })
+
+    def to_class(self, act):
+        return self.classes[str(act)]
+
+    def encode_actions(self, act_n):
+        return np.array(list(map(self.to_class, act_n)))
 
     def setup_action_classes(self):
         self.classes =  {

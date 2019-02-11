@@ -19,11 +19,11 @@ from args import get_args
 if __name__ == '__main__':
     env = make_env('MontezumaRevenge-v0', 84, 84)
     n_iter = 500
-    num_samples = 128
+    num_samples = 5000
     batch_size = 32
     enc_threshold = 1.7
-    init_enc_threshold = 0.2
-    use_encoder = 0
+    init_enc_threshold = 1.2
+    use_encoder = 1
     if use_encoder:
         model_name = 'enc-init-policy-base-mr'
     else:
@@ -33,8 +33,8 @@ if __name__ == '__main__':
     restore = 0
     save = 1
     
-    test_run = 0
-    view = 1
+    test_run = 1
+    view = 0
     
     if view:
         train = False
@@ -51,16 +51,12 @@ if __name__ == '__main__':
     replay_buffer = MasterBuffer(max_size=5000)
     logger = Logger(max_size=100000)
 
-    if use_encoder:
-        # encoder = Encoder(encoder_args)
-        # obs_encoded_shape = encoder.obs_encoded.get_shape().as_list()
-        policy = PPO(policy_graph_args, adv_args, (None, 84, 84, 1))
-        rnd = RND((None, 84, 84, 1), rnd_args)
-        agent = Agent(env, policy, None, rnd, replay_buffer, logger, agent_args)
-    else:
-        policy = PPO(policy_graph_args, adv_args, (None, 84, 84, 1))
-        rnd = RND((None, 84, 84, 1), rnd_args)
-        agent = NoEncoderAgent(env, policy, rnd, replay_buffer, logger, agent_args)
+    if use_encoder: agent_args['use_encoder'] = 1
+    else: agent_args['use_encoder'] = 0
+
+    policy = PPO(policy_graph_args, adv_args, (None, 84, 84, 1))
+    rnd = RND((None, 84, 84, 1), rnd_args)
+    agent = Agent(env, policy, rnd, replay_buffer, logger, agent_args)
     agent.logger.model_name = model_name
 
     # training parameters
@@ -81,13 +77,16 @@ if __name__ == '__main__':
                 if use_encoder:
                     print('training encoder...')
                     agent.init_encoder(batch_size, num_samples, init_enc_threshold)
+                
+                print('initializing obs running mean...')
+                agent.init_obsmean()
+                
                 print('starting training...')
                 for itr in range(n_iter):
                     start = time.time()
                     agent.train(batch_size, num_samples, enc_threshold, itr, writer)
                     end = time.time()
                     print('completed itr {} in {}sec...\r'.format(str(itr), int(end-start)))
-                    print('size of logger:{}, size of buf:{}'.format(logger.size, len(replay_buffer.master_replay)))
 
             finally: # safe exit sooner
                 if save:
@@ -99,26 +98,17 @@ if __name__ == '__main__':
             obs = env.reset()
             while True:
                 env.render()
-                act = env.action_space.sample()
                 try:
                     act = int(input('Press a key to continue...'))
                 except (ValueError, TypeError):
                     act = 20
-                if act == 0:
-                    # if use_encoder:
-                    #     pass
-                    #     # obs = encoder.get_encoding([obs])
-                    # else:
+
+                if act == 0:                # best action on 0
                     obs = [obs]
                     act = policy.get_best_action(obs)
-                elif act not in range(17):
-                    # if use_encoder:
-                    #     pass
-                    #     # obs = encoder.get_encoding([obs])
-                    # else:
+                elif act not in range(17):  # sample on ENTER
                     obs = [obs]
                     act = policy.sample(obs)
-                    # act = policy.get_best_action(enc_ob)
                     
                 obs, rew, done, _ = env.step(act)
                 if done: break

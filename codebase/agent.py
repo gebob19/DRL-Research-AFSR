@@ -63,7 +63,11 @@ class Agent(object):
                 act = self.env.action_space.sample()
 
             n_obs, rew, done, info = self.env.step(act)
-            int_rew = self.rnd.get_rewards([obs])[0]
+
+            # format obs
+            rnd_obs = ((n_obs - self.obs_running_mean) / np.sqrt(self.obs_running_mean.var))
+            rnd_obs = np.clip(rnd_obs, -5, 5)
+            int_rew = self.rnd.get_rewards([rnd_obs])[0]
             
             # dont record when agent dies
             if info['ale.lives'] != n_lives: ignore = 18; n_lives -= 1
@@ -80,7 +84,7 @@ class Agent(object):
             else: ignore -= 1
 
         # normalize
-        int_rew_n = (int_rew_n - self.rew_running_mean.mean) / self.rew_running_mean.var
+        int_rew_n = (int_rew_n - self.rew_running_mean.mean) / np.sqrt(self.rew_running_mean.var)
         ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
         self.obs_running_mean.update(np.array(obs_n))
@@ -136,14 +140,16 @@ class Agent(object):
                 
                 total_r = b_erew + b_irew
                 
-                # 1 critic temp soln
-                critic_loss = self.policy.train_critic(b_eobs, b_enobs, total_r, b_dones)
-                adv = self.policy.estimate_adv(b_eobs, total_r, b_enobs, b_dones)
-                actor_loss, summ = self.policy.train_actor(b_eobs, b_acts, adv)
+                # norm for policy
+                ac_obs, ac_n_obs = b_eobs / 255., b_enobs / 255.
+
+                critic_loss = self.policy.train_critic(ac_obs, ac_n_obs, total_r, b_dones)
+                adv = self.policy.estimate_adv(ac_obs, total_r, ac_n_obs, b_dones)
+                actor_loss, summ = self.policy.train_actor(ac_obs, b_acts, adv)
                 writer.add_summary(summ, itr)
 
                 if self.use_encoder and self.train_enc_next_itr:
-                    enc_loss = self.policy.train_acthead(b_eobs, b_enobs, b_acts)
+                    enc_loss = self.policy.train_acthead(ac_obs, ac_n_obs, b_acts)
                     self.logger.log('encoder', ['loss'], [enc_loss])
             
                 if itr % self.log_rate == 0:

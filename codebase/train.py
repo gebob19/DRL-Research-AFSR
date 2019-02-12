@@ -17,7 +17,7 @@ from args import get_args
 
 if __name__ == '__main__':
     env = make_env('MontezumaRevenge-v0', 84, 84)
-    n_iter = 500
+    n_iter = 200
     num_samples = 8000
     batch_size = 32
     enc_threshold = 1.0

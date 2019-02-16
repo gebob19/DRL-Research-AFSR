@@ -65,7 +65,7 @@ class Agent(object):
             n_obs, rew, done, info = self.env.step(act)
 
             # format obs
-            rnd_obs = ((n_obs - self.obs_running_mean) / np.sqrt(self.obs_running_mean.var))
+            rnd_obs = ((n_obs - self.obs_running_mean.mean) / np.sqrt(self.obs_running_mean.var))
             rnd_obs = np.clip(rnd_obs, -5, 5)
             int_rew = self.rnd.get_rewards([rnd_obs])[0]
             

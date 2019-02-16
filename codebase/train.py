@@ -17,24 +17,25 @@ from args import get_args
 
 if __name__ == '__main__':
     env = make_env('MontezumaRevenge-v0', 84, 84)
-    n_iter = 200
+    n_iter = 500
     num_samples = 8000
-    batch_size = 32
-    enc_threshold = 1.0
-    init_enc_threshold = 0.5
-    use_encoder = 0
+    batch_size = 64
+    enc_threshold = 1.9
+    init_enc_threshold = 1.5
+    use_encoder = 1
 
     if use_encoder:
-        model_name = 'enc-base-mr'
+        # model_name = 'enc-base-mr-longer'
+        model_name = 'enc-base-mr-encthresholds_{}-{}-longer'.format(init_enc_threshold, enc_threshold)
     else:
-        model_name = 'no-enc-base-mr'
+        model_name = 'no-enc-base-mr-longer'
     
     train = 1
     restore = 0
     save = 1
     
     test_run = 0
-    view = 0
+    view = 1
     
     if view:
         train = False
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     saver = tf.train.Saver()
 
     with tf.Session(config=tf_config) as sess:
-        writer = tf.summary.FileWriter('./tf_logs')
+        writer = tf.summary.FileWriter('./tf_logs_{}'.format(model_name))
         sess.run(tf.global_variables_initializer())
         agent.set_session(sess)
         if restore: 

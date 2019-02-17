@@ -83,13 +83,15 @@ class Agent(object):
                     n_lives, ignore = 6, 0
             else: ignore -= 1
 
+        # log before normalization
+        self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
+
         # normalize
         int_rew_n = (int_rew_n - self.rew_running_mean.mean) / np.sqrt(self.rew_running_mean.var)
         ext_rew_n = np.clip(ext_rew_n, -1, 1)
 
         self.obs_running_mean.update(np.array(obs_n))
 
-        self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
         return obs_n, act_n, ext_rew_n, int_rew_n, n_obs_n, dones_n
         
     def get_data(self, batch_size, num_samples, itr):

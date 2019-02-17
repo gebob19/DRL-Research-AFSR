@@ -22,20 +22,20 @@ if __name__ == '__main__':
     batch_size = 64
     enc_threshold = 1.9
     init_enc_threshold = 1.5
-    use_encoder = 1
+    use_encoder = 0
 
     if use_encoder:
         # model_name = 'enc-base-mr-longer'
-        model_name = 'enc-base-mr-encthresholds_{}-{}-longer'.format(init_enc_threshold, enc_threshold)
+        model_name = 'enc-base-mr-encthresholds_{}-{}-2'.format(init_enc_threshold, enc_threshold)
     else:
-        model_name = 'no-enc-base-mr-longer'
+        model_name = 'no-enc-base-mr-2'
     
     train = 1
     restore = 0
     save = 1
     
     test_run = 0
-    view = 1
+    view = 0
     
     if view:
         train = False
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         agent.set_session(sess)
         if restore: 
-            saver.restore(sess, "./model_{}/model.ckpt".format(model_name))
+            saver.restore(sess, "./algo_data/model_{}/model.ckpt".format(model_name))
             agent.num_random_samples = 5
 
         if train:

@@ -22,7 +22,7 @@ if __name__ == '__main__':
     batch_size = 64
     enc_threshold = 1.9
     init_enc_threshold = 1.5
-    use_encoder = 0
+    use_encoder = 1
 
     if use_encoder:
         # model_name = 'enc-base-mr-longer'

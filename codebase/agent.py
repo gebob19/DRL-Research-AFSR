@@ -48,6 +48,38 @@ class Agent(object):
                  bdset.append(np.array(dset[i:i+batch_size]))
             batched_dsets.append(np.array(bdset))
         return tuple(batched_dsets)
+
+    def record(self, num_samples):
+        done, i = False, 0
+        n_lives, ignore = 6, 0
+        obs_n, act_n, ext_rew_n, int_rew_n, n_obs_n, dones_n = [], [], [], [], [], []
+        
+        # policy rollout
+        obs = self.env.reset()
+        while not done and i < num_samples:
+            act = self.policy.sample([obs])
+            n_obs, rew, done, info = self.env.step(act)
+
+            # format obs
+            rnd_obs = ((n_obs - self.obs_running_mean.mean) / np.sqrt(self.obs_running_mean.var))
+            rnd_obs = np.clip(rnd_obs, -5, 5)
+            int_rew = self.rnd.get_rewards([rnd_obs])[0]
+            
+            # dont record when agent dies
+            if info['ale.lives'] != n_lives: ignore = 18; n_lives -= 1
+            if not ignore:
+                i += 1
+                obs_n.append(obs); ext_rew_n.append(rew); n_obs_n.append(n_obs)
+                act_n.append(act); dones_n.append(done); int_rew_n.append(int_rew)
+                if done:
+                    obs = self.env.reset()
+                    done = True
+                    n_lives, ignore = 6, 0
+            else: ignore -= 1
+
+        self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
+        return int_rew_n, ext_rew_n, obs_n
+
         
     def sample_env(self, batch_size, num_samples, shuffle, algorithm='algorithm'):
         done, i = False, 0

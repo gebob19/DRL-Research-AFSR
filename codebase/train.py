@@ -30,10 +30,11 @@ if __name__ == '__main__':
     else:
         model_name = 'no-enc-base-mr-2'
     
-    train = 1
+    train = 0
     restore = 0
-    save = 1
+    save = 0
     
+    record = 1
     test_run = 0
     view = 0
     
@@ -47,7 +48,11 @@ if __name__ == '__main__':
         batch_size = 8
         save = False
         restore = False
-
+    if record:
+        train, save = False, False
+        # restore = True
+        n_iter = 1
+        
     if save or restore  or test_run:
         directory = "./model_{}".format(model_name)
         if not os.path.exists(directory):
@@ -77,6 +82,19 @@ if __name__ == '__main__':
         if restore: 
             saver.restore(sess, "./algo_data/model_{}/model.ckpt".format(model_name))
             agent.num_random_samples = 5
+
+        if record:
+            print('Starting to record...')
+            br_frames, i, br_rew = [], 0, 0
+            agent.init_obsmean()
+            for itr in range(n_iter):
+                int_rew, ext_rew, frames = agent.record(num_samples)
+                agent.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew, ext_rew])
+                mean_rollout = np.mean(int_rew) + np.mean(ext_rew)
+                if mean_rollout > br_rew:
+                    br_frames, i, br_rew = frames, itr, mean_rollout
+            logger.log('env', ['frames'], [br_frames])
+            logger.export()
 
         if train:
             try:
@@ -118,5 +136,7 @@ if __name__ == '__main__':
                     
                 obs, rew, done, _ = env.step(act)
                 if done: break
+
+        
 
                 

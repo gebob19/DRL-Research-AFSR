@@ -246,7 +246,9 @@ class Logger(object):
             },
             'env': {
                 'int_rewards': [],
-                'ext_rewards': []
+                'ext_rewards': [],
+                'frames': [],
+                'norm_int_rew': []
             }
         }
         self.model_name = ''

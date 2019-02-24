@@ -115,6 +115,8 @@ class Agent(object):
                     n_lives, ignore = 6, 0
             else: ignore -= 1
 
+            obs = n_obs
+
         # log before normalization
         self.logger.log('env', ['int_rewards', 'ext_rewards'], [int_rew_n, ext_rew_n])
 

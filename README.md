@@ -37,5 +37,5 @@ Three experiments were tested, two used my algorithm (AFSR+RND_1.2-1.7, AFSR+RND
 *Note:* For my algorithm, the first number is the initial mean loss I trained the encoder too before training the policy, and the second number is the mean loss threshold which was maintained throughout rollouts.
 
 ![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/100itr_table.png)
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/density_policy_loss.png)
+![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/denisty_policy_loss.png)
 ![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/encoder_rew_loss.png)

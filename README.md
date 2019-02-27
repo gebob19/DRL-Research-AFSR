@@ -32,11 +32,22 @@ I used a standard actor-critic algorithm setup which uses random network distill
 
 ## Results
 
-Three experiments were tested, two used my algorithm (enc_1.2-1.7, enc_1.5-1.9) and one as the standard RND setup. 
+Three experiments were tested, two used my algorithm (AFSR+RND_1.2-1.7, AFSR+RND_1.5-1.9) and one as the standard RND setup. 
 
 *Note:* For my algorithm, the first number is the initial mean loss I trained the encoder too before training the policy, and the second number is the mean loss threshold which was maintained throughout rollouts.
 
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/100_itr_table.png)
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/actor_loss.png)
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/density_loss.png)
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/rews.png)
+![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/100itr_table.png)
+![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/denisty_policy_loss.png)
+![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/encoder_rew_loss.png)
+
+## Analysis
+From the table, we see AFSR+RND achieves a better average internal reward than standard RND over 100 iterations. Which could be because using AFSR, the task is simplified for the policy, allowing it to maximize internal rewards faster.
+
+We also see that the hyperparameters of the encoder loss thresholds must be fine-tuned for optimal results, which could be a disadvantage. 
+
+With a loss threshold of 1.7, we see that we actually limit the policy too much, leading to a higher loss score for our policy. This could be because the policy is forced to focus too much on predicting the agent’s actions, rather than learning how to complete the task. 
+
+With a threshold of 1.9, we relax the policies focus on the agent, allowing it to accomplish the task faster. This is seen since its actor loss is the best of the three tests. 
+
+However since we have only tested each setup once with only 100 training iterations the results are still inconclusive, and more testing should be done.
+

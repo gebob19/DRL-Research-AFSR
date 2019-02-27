@@ -32,11 +32,10 @@ I used a standard actor-critic algorithm setup which uses random network distill
 
 ## Results
 
-Three experiments were tested, two used my algorithm (enc_1.2-1.7, enc_1.5-1.9) and one as the standard RND setup. 
+Three experiments were tested, two used my algorithm (AFSR+RND_1.2-1.7, AFSR+RND_1.5-1.9) and one as the standard RND setup. 
 
 *Note:* For my algorithm, the first number is the initial mean loss I trained the encoder too before training the policy, and the second number is the mean loss threshold which was maintained throughout rollouts.
 
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/100_itr_table.png)
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/actor_loss.png)
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/density_loss.png)
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/rews.png)
+![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/100itr_table.png)
+![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/density_policy_loss.png)
+![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/encoder_rew_loss.png)

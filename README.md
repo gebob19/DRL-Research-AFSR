@@ -34,7 +34,7 @@ I used a standard actor-critic algorithm setup which uses random network distill
 
 ## Results
 
-Three experiments were tested, two used the proposed implementation (AFSR+RND_1.2-1.7, AFSR+RND_1.5-1.9) and one as the standard RND setup. 
+Three experiments were tested, two used the proposed implementation (AFSR+RND_1.2-1.7, AFSR+RND_1.5-1.9) and one as the standard RND setup. All experiments were trained for 100 iterations. The table below represents the average values over all rollouts.
 
 *Note:* For the proposed implementation, the first number is the initial mean loss I trained the encoder too before training the policy, and the second number is the mean loss threshold which was maintained throughout rollouts.
 

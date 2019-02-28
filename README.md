@@ -26,8 +26,6 @@ We then concatenate both encodings, which we will refer to as *e(s, s’)* and p
 
 To predict this accurately the network must be able to extract information about the agent itself, and in doing so will hopefully learn a better state representation.
 
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/diagram.png) 
-
 ## Setup
 
 I used a standard actor-critic algorithm setup which uses random network distillation (RND) to encourage the agent to explore. For an environment, I used Montezuma’s Revenge from OpenAI’s gym. More specific details can be viewed in the source code.

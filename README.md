@@ -26,7 +26,7 @@ We then concatenate both encodings, which we will refer to as *e(s, s’)* and p
 
 To predict this accurately the network must be able to extract information about the agent itself, and in doing so will hopefully learn a better state representation.
 
-![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/diagram.png)
+![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/diagram.png) 
 
 ## Setup
 

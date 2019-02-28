@@ -4,19 +4,20 @@ from utils import Network
 
 class PPO(object):
     def __init__(self, graph_args, adv_args, in_shape):
-        self.act_dim = graph_args['act_dim']
-        # clip_range = graph_args['clip_range']
-        # conv operations params
+        # arg unpacking
+        self.act_dim = graph_args['act_dim']        
+        ## conv operations params
         n_hidden = graph_args['n_hidden']
         hid_size = graph_args['hid_size']
-
         conv_depth = graph_args['conv_depth']
-        
+
+        ## training params
         self.learning_rate = graph_args['learning_rate']
         self.num_target_updates = graph_args['num_target_updates']
         self.num_grad_steps_per_target_update = graph_args['num_grad_steps_per_target_update']
-        
         self.gamma = adv_args['gamma']
+        
+        # class similar actions => easier to predict
         self.setup_action_classes()
 
         self.act, self.adv = self.define_placeholders()
@@ -61,7 +62,7 @@ class PPO(object):
         self.actnn_learning_rate = graph_args['actnn_learning_rate']
         self.nclasses = graph_args['actnn_nclasses']
 
-        # placeholders act_i-1, obs_i-1, obs_i
+        # placeholders act_i, obs_i, obs_i+1
         self.prev_act_ph = tf.placeholder(shape=(None,), dtype=tf.int32) 
         self.actnn_prev_obs_ph = self.half_policy_distrib
         self.actnn_obs_ph = self.half_policy_distrib_2

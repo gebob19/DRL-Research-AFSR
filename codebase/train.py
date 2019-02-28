@@ -17,24 +17,26 @@ from args import get_args
 
 if __name__ == '__main__':
     env = make_env('MontezumaRevenge-v0', 84, 84)
+    
+    # main training params
     n_iter = 500
     num_samples = 8000
     batch_size = 64
+    
+    # encoder params
+    use_encoder = 1
     enc_threshold = 1.9
     init_enc_threshold = 1.5
-    use_encoder = 1
-
     if use_encoder:
-        # model_name = 'enc-base-mr-longer'
         model_name = 'enc-base-mr-encthresholds_{}-{}-2'.format(init_enc_threshold, enc_threshold)
     else:
         model_name = 'no-enc-base-mr-2'
     
-    train = 0
+    train = 1
     restore = 0
-    save = 0
+    save = 1
     
-    record = 1
+    record = 0
     test_run = 0
     view = 0
     
@@ -50,15 +52,16 @@ if __name__ == '__main__':
         restore = False
     if record:
         train, save = False, False
-        # restore = True
-        n_iter = 1
+        restore = True
+        n_iter = 100
         
     if save or restore  or test_run:
         directory = "./model_{}".format(model_name)
         if not os.path.exists(directory):
             os.mkdir(directory)
 
-    policy_graph_args, adv_args, encoder_args, rnd_args, agent_args = get_args(env, test_run=test_run)
+    # setup graph 
+    policy_graph_args, adv_args, rnd_args, agent_args = get_args(env, test_run=test_run)
     replay_buffer = MasterBuffer(max_size=5000)
     logger = Logger(max_size=100000)
 
@@ -70,19 +73,21 @@ if __name__ == '__main__':
     agent = Agent(env, policy, rnd, replay_buffer, logger, agent_args)
     agent.logger.model_name = model_name
 
-    # training parameters
     tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
     tf_config.gpu_options.allow_growth = True
     saver = tf.train.Saver()
 
     with tf.Session(config=tf_config) as sess:
+        # gradient logs 
         writer = tf.summary.FileWriter('./tf_logs_{}'.format(model_name))
         sess.run(tf.global_variables_initializer())
         agent.set_session(sess)
+
         if restore: 
             saver.restore(sess, "./algo_data/model_{}/model.ckpt".format(model_name))
             agent.num_random_samples = 5
 
+        # record frames of best mean & max rollouts
         if record:
             print('Starting to record...')
             br_frames, i, br_rew = [], 0, 0
@@ -118,7 +123,7 @@ if __name__ == '__main__':
                     logger.export()
                     saver.save(sess, "./model_{}/model.ckpt".format(model_name))
         
-        if view: # view
+        if view: 
             obs = env.reset()
             while True:
                 env.render()
@@ -126,7 +131,7 @@ if __name__ == '__main__':
                     act = int(input('Press a key to continue...'))
                 except (ValueError, TypeError):
                     act = 20
-
+                    
                 if act == 0:                # best action on 0
                     obs = [obs]
                     act = policy.get_best_action(obs)

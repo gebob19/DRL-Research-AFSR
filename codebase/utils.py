@@ -100,6 +100,71 @@ class RunningMeanStd(object):
         self.var = new_var
         self.count = tot_count
 
+
+class Logger(object):
+    def __init__(self, max_size):
+        self.max_size = max_size
+        self.size = 0
+        self.logs = {
+            'density': {
+                'loss': []
+            },
+            'encoder': {
+                'loss': []
+            },
+            'policy': {
+                'actor_loss':[],
+                'critic_loss':[],
+            },
+            'env': {
+                'int_rewards': [],
+                'ext_rewards': [],
+                'frames': [],
+                'norm_int_rew': []
+            }
+        }
+        self.model_name = ''
+        
+    def log(self, tag, subtags, data):
+        for subtag, d in zip(subtags, data):
+            self.logs[tag][subtag].append(d)
+        self.size += 1
+        
+        if self.size > self.max_size:
+            self.export()
+            self.flush()
+            self.size = 0
+
+    def export(self):
+        fname = '{}-{}.pkl'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), self.model_name)
+        with open(fname, 'wb') as f:
+            pickle.dump(self.logs, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def import_logs(self, fname):
+        with open(fname, 'rb') as f:
+            self.logs = pickle.load(f)
+    
+    def flush(self):
+        self.logs = {
+            'density': {
+                'loss': []
+            },
+            'encoder': {
+                'loss': []
+            },
+            'policy': {
+                'actor_loss':[],
+                'critic_loss':[],
+            },
+            'env': {
+                'int_rewards': [],
+                'ext_rewards': []
+            }
+        }
+
+
+
+## NOT USED 
 class ReplayBuffer(object):
     def __init__(self, max_size=10000):
         self.obs = []
@@ -229,63 +294,3 @@ class MasterBuffer(object):
         self.temp_replay.flush()
         self.master_replay.flush()
 
-class Logger(object):
-    def __init__(self, max_size):
-        self.max_size = max_size
-        self.size = 0
-        self.logs = {
-            'density': {
-                'loss': []
-            },
-            'encoder': {
-                'loss': []
-            },
-            'policy': {
-                'actor_loss':[],
-                'critic_loss':[],
-            },
-            'env': {
-                'int_rewards': [],
-                'ext_rewards': [],
-                'frames': [],
-                'norm_int_rew': []
-            }
-        }
-        self.model_name = ''
-        
-    def log(self, tag, subtags, data):
-        for subtag, d in zip(subtags, data):
-            self.logs[tag][subtag].append(d)
-        self.size += 1
-        
-        if self.size > self.max_size:
-            self.export()
-            self.flush()
-            self.size = 0
-
-    def export(self):
-        fname = '{}-{}.pkl'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), self.model_name)
-        with open(fname, 'wb') as f:
-            pickle.dump(self.logs, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-    def import_logs(self, fname):
-        with open(fname, 'rb') as f:
-            self.logs = pickle.load(f)
-    
-    def flush(self):
-        self.logs = {
-            'density': {
-                'loss': []
-            },
-            'encoder': {
-                'loss': []
-            },
-            'policy': {
-                'actor_loss':[],
-                'critic_loss':[],
-            },
-            'env': {
-                'int_rewards': [],
-                'ext_rewards': []
-            }
-        }

@@ -22,25 +22,7 @@ def get_args(env, test_run=False):
         'gamma': 0.99
     }
 
-    encoder_args = {
-        'obs_dim': env.observation_space.shape,
-        'act_dim': 5, # number of action classes
-        'n_layers_frozen': 10,
-        'act_layer_extract': 30,
-        'learning_rate': 1e-6,
-        'actnn_layers': 2,
-        'actnn_units': 64,
-        'fsize': 64,
-        'conv_depth': 4,
-        'n_strides': 1
-    }
-    target_N = {
-        'fsize': 32,
-        'conv_depth': 4,
-        'n_layers': 1,
-        'kernel_init': None
-    }
-    pred_N = {
+    network = {
         'fsize': 32,
         'conv_depth': 4,
         'n_layers': 1,
@@ -51,11 +33,10 @@ def get_args(env, test_run=False):
         'out_size': 512,
         'bonus_multiplier': 1,
         'proportion_to_update': .25,
-        'target_args': target_N,
-        'pred_args': pred_N
+        'target_args': network,
+        'pred_args': network
     }
 
-    # Train to 1mil iterations -> other papers saw similar results 
     agent_args = {
         'rnd_train_itr': 1,
         'encoder_update_freq': 10,
@@ -73,5 +54,5 @@ def get_args(env, test_run=False):
         agent_args['encoder_train_itr'] = 1
         agent_args['encoder_train_limit'] = 1
 
-    return policy_graph_args, adv_args, encoder_args, rnd_args, agent_args
+    return policy_graph_args, adv_args, rnd_args, agent_args
     

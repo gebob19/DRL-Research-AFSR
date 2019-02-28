@@ -14,9 +14,9 @@ This method simplifies the task for the policy by providing the policy with a lo
 
 In general, the most basic video game states can be represented as the image being displayed on the screen. This usually includes the agent’s in-game character, objectives to achieve, and obstacles to avoid.
 
-At the heart of my algorithm, I focus on the fact that the player which our agent controls is clearly a required factor to include in an accurate lower level state representation.
+At the heart of the proposed implementation, I focus on the fact that the player which our agent controls is clearly a required factor to include in an accurate lower level state representation.
 
-My algorithm aims to quickly learn an agent-focused state representation allowing the agent to accomplish the given task faster, while not limiting the information available to the policy, all with minimal additional computational cost.
+The proposed implementation aims to quickly learn an agent-focused state representation allowing the agent to accomplish the given task faster, while not limiting the information available to the policy, all with minimal additional computational cost.
 
 ## Algorithm
 
@@ -34,9 +34,9 @@ I used a standard actor-critic algorithm setup which uses random network distill
 
 ## Results
 
-Three experiments were tested, two used my algorithm (AFSR+RND_1.2-1.7, AFSR+RND_1.5-1.9) and one as the standard RND setup. 
+Three experiments were tested, two used the proposed implementation (AFSR+RND_1.2-1.7, AFSR+RND_1.5-1.9) and one as the standard RND setup. 
 
-*Note:* For my algorithm, the first number is the initial mean loss I trained the encoder too before training the policy, and the second number is the mean loss threshold which was maintained throughout rollouts.
+*Note:* For the proposed implementation, the first number is the initial mean loss I trained the encoder too before training the policy, and the second number is the mean loss threshold which was maintained throughout rollouts.
 
 ![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/100itr_table.png)
 ![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/denisty_policy_loss.png)

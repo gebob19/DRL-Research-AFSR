@@ -26,7 +26,7 @@ To learn an agent-focused state representation we train a shallow neural network
 
 We then concatenate both encodings, which we will refer to as *e(s, s’)* and pass it through a shallow neural network which will predict *p(a | e(s, s’))*. The results are then backpropagated through this shallow neural network, and through the first half of our policy.
 
-To predict this accurately the network must be able to extract information about the agent itself, and in doing so will hopefully learn a better state representation. For example, if the in-game character is facing to the left at state *s* and is then facing the right on state *s'*, the model should be able to predict the action taken would be to move right. 
+To predict this accurately the network must be able to extract information about the agent itself, and in doing so will hopefully learn a better state representation. For example, if the in-game character is facing to the left at state *s* and is then facing to the right on state *s'*, the model should be able to predict the action taken would be to move right. 
 
 ## Setup
 

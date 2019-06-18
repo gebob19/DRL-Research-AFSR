@@ -22,7 +22,7 @@ The proposed implementation aims to quickly learn an agent-focused state represe
 
 ![alt text](https://github.com/gebob19/PredictiveExploration/blob/master/codebase/imgs/diagram.png) 
 
-To learn an action-focused state representation we train a shallow neural network which extends out from the first half of the policy. It is trained given two state, sand *s’* where *s’* was reached by taking action *a* at state *s*. We first pass both *s* and *s’* through the first half of our policy, to get *e(s)*, *e(s’)* (some encodings of *s* and *s’*). 
+To learn an agent-focused state representation we train a shallow neural network which extends out from the first half of the policy. It is trained given two state, sand *s’* where *s’* was reached by taking action *a* at state *s*. We first pass both *s* and *s’* through the first half of our policy, to get *e(s)*, *e(s’)* (some encodings of *s* and *s’*). 
 
 We then concatenate both encodings, which we will refer to as *e(s, s’)* and pass it through a shallow neural network which will predict *p(a | e(s, s’))*. The results are then backpropagated through this shallow neural network, and through the first half of our policy.
 
